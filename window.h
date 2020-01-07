@@ -34,19 +34,19 @@ public:
 	Window(MainWindow *mw);
 
 protected:
-	void keyPressEvent(QKeyEvent *event) override;	
+	void keyPressEvent(QKeyEvent *event) override;
 
 signals:
 	void myMessage(QString msg);
 
-private slots:	
+private slots:
 	void get_path();
 	void hide_tree();
 	void _init_all();
 	void _init_geometry();
 	void _init_windowing();
 	void load_images(int z, int x, int y, int a, int b);
-	void z_line_moved(int which);	
+	void z_line_moved(int which);
 	void x_line_moved(int which);
 	void y_line_moved(int which);
 	void update_dvr_slices();
@@ -57,7 +57,7 @@ private:
 	//ScreenWidget *screen_widget;
 	//GLWidget *glWidget;
 	DVRWidget *dvr_widget;
-	DataCube *data_cube;	
+	DataCube *data_cube;
 	QLabel *create_label(QWidget *sw);
 	QLabel *selected, *coord_z, *coord_x, *coord_y, *window_z, *window_x, *window_y, *window_dvr, *coord_dvr;
 	QPushButton *initBtn, *hideBtn, *toggleLineBtn, *toggleBorderBtn;
@@ -66,11 +66,11 @@ private:
 	QFileSystemModel *model;
 	QModelIndex *currIdx;
 	QList<QString> file_list;
-	int view_size;	
+	int view_size;
 	float slice_thickness;
 	QHBoxLayout *create_menubar();
 	void add_menubar_button(QHBoxLayout *m_layout, QMenu *m, QString icon_path);
-	QWidget *w_browser, *menubar_z, *menubar_x, *menubar_y, *menubar_dvr;	
+	QWidget *w_browser, *menubar_z, *menubar_x, *menubar_y, *menubar_dvr;
 
 	QHBoxLayout *mainLayout;
 	QVBoxLayout *container_3;

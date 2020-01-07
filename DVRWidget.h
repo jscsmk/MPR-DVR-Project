@@ -29,13 +29,13 @@ public:
 public slots:
 	void init_all();
 	void init_geometry();
-	void init_windowing();	
+	void init_windowing();
 	void cleanup();
 	void toggle_mode();
 	void toggle_border_line();
-	void toggle_axial_slice();	
-	void toggle_sagittal_slice();	
-	void toggle_coronal_slice();	
+	void toggle_axial_slice();
+	void toggle_sagittal_slice();
+	void toggle_coronal_slice();
 	void get_slice_info();
 
 signals:
@@ -53,10 +53,10 @@ protected:
 	void resizeGL(int width, int height) override;
 	void mousePressEvent(QMouseEvent *event) override;
 	void mouseMoveEvent(QMouseEvent *event) override;
-	void wheelEvent(QWheelEvent *event) override;	
+	void wheelEvent(QWheelEvent *event) override;
 	QVector3D get_arcball_pos(int m_x, int m_y);
 
-private:	
+private:
 	//QOpenGLContext *m_context;
 	GLuint m_target_texture, m_depthbuffer, m_framebuffer;
 	DataCube *data_cube;
@@ -71,9 +71,9 @@ private:
 		screen_size,
 		dvr_pixel_num,
 		rescale_slope, rescale_intercept,	// dicom pixel rescale values
-		mouse_last_x, mouse_last_y;		
+		mouse_last_x, mouse_last_y;
 	bool is_first,
-		 mode,	// flase: OTF, true: MIP		
+		 mode,	// flase: OTF, true: MIP
 		 border_line_visible,
 		 axial_slice_visible,
 		 sagittal_slice_visible,

@@ -1,5 +1,5 @@
 #include "data_cube.h"
-#include <iostream>  
+#include <iostream>
 #include <math.h>
 #include <algorithm>
 #include <tuple>
@@ -17,7 +17,7 @@ DataCube::DataCube()
 {
 	x_border_visible = 0;
 	y_border_visible = 0;
-	z_border_visible = 0;	
+	z_border_visible = 0;
 }
 
 void DataCube::set_data(int *data, int x, int y, int z, int p, int a, int b, float t, int mi, int ma)
@@ -53,8 +53,8 @@ void DataCube::init_MPR()
 
 	pixel_len_x = L_x / (slice_pixel_num - 1);
 	pixel_len_y = pixel_len_x;
-	pixel_len_z = pixel_len_x;	
-	
+	pixel_len_z = pixel_len_x;
+
 	P_axis = QVector3D(N_x / 2, N_y / 2, N_z * slice_thickness / 2);
 
 	nx = QVector3D(1, 0, 0);
@@ -68,11 +68,11 @@ void DataCube::init_MPR()
 	wy = QVector3D(1, 0, 0);
 	hy = QVector3D(0, 0, 1);
 	wz = QVector3D(1, 0, 0);
-	hz = QVector3D(0, 1, 0);	
+	hz = QVector3D(0, 1, 0);
 
 	qz = P_axis - QVector3D(L_z * 7 / 8, L_z / 2, 0);
 	qx = P_axis + QVector3D(0, L_x * 7 / 8, -L_x / 2);
-	qy = P_axis - QVector3D(L_y * 7 / 8, 0, L_y / 2);	
+	qy = P_axis - QVector3D(L_y * 7 / 8, 0, L_y / 2);
 
 	//r_x = 0;
 	r_x = PI / 2;
@@ -95,12 +95,12 @@ int* DataCube::get_raw_data()
 
 void DataCube::toggle_border_line(int slice_type)
 {
-	if (slice_type == 0) 
+	if (slice_type == 0)
 		z_border_visible = (z_border_visible + 1) % 2;
 	else if (slice_type == 1)
 		x_border_visible = (x_border_visible + 1) % 2;
 	else
-		y_border_visible = (y_border_visible + 1) % 2;	
+		y_border_visible = (y_border_visible + 1) % 2;
 }
 
 void DataCube::get_slice(int slice_type, int *slice_data)
@@ -139,7 +139,7 @@ void DataCube::get_slice(int slice_type, int *slice_data)
 			temp = temp + w;
 		}
 		start = start + h;
-	}	
+	}
 
 	//return slice;
 }
@@ -150,7 +150,7 @@ tuple<int, int, float> DataCube::get_line_info(int slice_type)
 	float pr, pl, line_angle;
 	QVector3D temp, w, h, pr_w, pr_h;
 
-	if (slice_type == 0) { // z slice		
+	if (slice_type == 0) { // z slice
 		temp = P_axis - qz;
 		w = wz;
 		h = hz;
@@ -185,13 +185,13 @@ tuple<int, int, float> DataCube::get_line_info(int slice_type)
 	if (QVector3D::dotProduct(pr_w, w) < 0)
 		line_x *= -1;
 	if (QVector3D::dotProduct(pr_h, h) < 0)
-		line_y *= -1;	
+		line_y *= -1;
 
 	return {line_x, line_y, line_angle};
 }
 
 int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
-{	
+{
 	z /= slice_thickness;
 
 	// see https://darkpgmr.tistory.com/117
@@ -200,7 +200,7 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 	if (slice_type == 0) {
 		draw_border = z_border_visible;
 		pl = pixel_len_z;
-	}		
+	}
 	else if (slice_type == 1) {
 		draw_border = x_border_visible;
 		pl = pixel_len_x;
@@ -208,7 +208,7 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 	else if (slice_type == 2) {
 		draw_border = y_border_visible;
 		pl = pixel_len_y;
-	}	
+	}
 
 	if (x < -2*pl || y < -2*pl || z < -2*pl || x >= N_x - 1 + 2*pl || y >= N_y - 1 + 2*pl || z >= N_z - 1 + 2*pl) {
 		// if out of range, return min val
@@ -232,7 +232,7 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 	int z_floor = floor(z);
 	int x_ceil = x_floor + 1;
 	int y_ceil = y_floor + 1;
-	int z_ceil = z_floor + 1;	
+	int z_ceil = z_floor + 1;
 
 	// get data values
 	fA = data_3d[N_x*N_y*z_floor + N_x*y_floor + x_floor];
@@ -243,7 +243,7 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 	fF = data_3d[N_x*N_y*z_ceil + N_x*y_ceil + x_floor];
 	fG = data_3d[N_x*N_y*z_ceil + N_x*y_ceil + x_ceil];
 	fH = data_3d[N_x*N_y*z_ceil + N_x*y_floor + x_ceil];
-			
+
 	// interpolation (x-axis)
 	a = x - x_floor;
 	b = 1 - a;
@@ -290,7 +290,7 @@ tuple<int, int, int, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
 }
 
 int DataCube::move_slice(int from, int target, float distance)
-{		
+{
 	QVector3D d, new_p;
 
 	if (target == 0) // move z slice
@@ -306,29 +306,29 @@ int DataCube::move_slice(int from, int target, float distance)
 		d = d * distance * pixel_len_x;
 	else // from y slice
 		d = d * distance * pixel_len_y;
-		
-	new_p = P_axis + d;	
+
+	new_p = P_axis + d;
 	if (new_p.x() < 0 || N_x - 1 < new_p.x() ||
 		new_p.y() < 0 || N_y - 1 < new_p.y() ||
 		new_p.z() < 0 || (N_z - 1) * slice_thickness < new_p.z())
 		return 0;
 
 	P_axis = new_p;
-	if (target == 0) // move z slice		
+	if (target == 0) // move z slice
 		qz = qz + d;
-	else if (target == 1) // move x slice		
+	else if (target == 1) // move x slice
 		qx = qx + d;
-	else // move y slice		
+	else // move y slice
 		qy = qy + d;
 
 	return 1;
 }
 
 int DataCube::rotate_slice(int slice_type, float a)
-{	
+{
 	QMatrix4x4 m_rotate, m_trans_axis, m_trans_axis_inverse;
 
-	m_rotate.setToIdentity();	
+	m_rotate.setToIdentity();
 	if (slice_type == 0)
 		m_rotate.rotate(a * 180 / PI, nz);
 	else if (slice_type == 1)
@@ -356,8 +356,8 @@ int DataCube::rotate_slice(int slice_type, float a)
 		qy = (m_trans_axis_inverse * m_rotate * m_trans_axis * QVector4D(qy, 1)).toVector3D();
 		ny = (m_rotate * QVector4D(ny, 1)).toVector3D();
 		wy = (m_rotate * QVector4D(wy, 1)).toVector3D();
-		hy = (m_rotate * QVector4D(hy, 1)).toVector3D();		
-		
+		hy = (m_rotate * QVector4D(hy, 1)).toVector3D();
+
 	}
 	else if (slice_type == 1) {
 		r_x += a;
@@ -374,7 +374,7 @@ int DataCube::rotate_slice(int slice_type, float a)
 		qy = (m_trans_axis_inverse * m_rotate * m_trans_axis * QVector4D(qy, 1)).toVector3D();
 		ny = (m_rotate * QVector4D(ny, 1)).toVector3D();
 		wy = (m_rotate * QVector4D(wy, 1)).toVector3D();
-		hy = (m_rotate * QVector4D(hy, 1)).toVector3D();		
+		hy = (m_rotate * QVector4D(hy, 1)).toVector3D();
 	}
 	else {
 		r_y += a;
@@ -391,8 +391,8 @@ int DataCube::rotate_slice(int slice_type, float a)
 		qz = (m_trans_axis_inverse * m_rotate * m_trans_axis * QVector4D(qz, 1)).toVector3D();
 		nz = (m_rotate * QVector4D(nz, 1)).toVector3D();
 		wz = (m_rotate * QVector4D(wz, 1)).toVector3D();
-		hz = (m_rotate * QVector4D(hz, 1)).toVector3D();		
-	}	
+		hz = (m_rotate * QVector4D(hz, 1)).toVector3D();
+	}
 
 	return 1;
 }
@@ -514,7 +514,7 @@ int DataCube::move_center(int slice_type, float dx, float dy)
 	P_axis = new_p;
 	qz = P_axis - (wz * 7 / 4 + hz) * L_z / 2;
 	qx = P_axis - (wx * 7 / 4 + hx) * L_x / 2;
-	qy = P_axis - (wy * 7 / 4 + hy) * L_y / 2;	
+	qy = P_axis - (wy * 7 / 4 + hy) * L_y / 2;
 
 	return 1;
 }
@@ -544,7 +544,7 @@ int DataCube::zoom_slice(int slice_type, float d)
 		L_y += d;
 		pixel_len_y = L_y / (slice_pixel_num - 1);
 		qy = qy - (wy * 7 / 4 + hy) * d / 2;
-	}	
+	}
 
 	return 1;
 }
@@ -583,7 +583,7 @@ int* DataCube::get_DVR_screen()
 
 		for (int j = 0; j < dvr_pixel_num; j++) {
 			screen[dvr_pixel_num*i + j] = ray_casting(temp.x(), temp.y(), temp.z());
-			temp = temp + ws * pixel_len_s;			
+			temp = temp + ws * pixel_len_s;
 		}
 		start = start + hs * pixel_len_s;
 	}
@@ -592,7 +592,7 @@ int* DataCube::get_DVR_screen()
 }
 
 int DataCube::ray_casting(float x, float y, float z)
-{	
+{
 	int max_val = 0;
 	float temp_len;
 	QVector3D ray, cur;
@@ -602,18 +602,18 @@ int DataCube::ray_casting(float x, float y, float z)
 	ray = ray / temp_len;
 	ray = ray * ray_len;
 	cur = ray_penetrating_point(ray);
-		
+
 	while (1)
 	{
 		if (cur.x() < 0 || cur.y() < 0 || cur.z() < 0 ||
 			cur.x() > N_x || cur.y() > N_y || cur.z() > N_z)
-			break;		
-	
+			break;
+
 		int interpolated_value = trilinear_interpolation(-1, cur.x(), cur.y(), cur.z());
 		if (max_val < interpolated_value)
 			max_val = interpolated_value;
 
-		cur = cur + ray;		
+		cur = cur + ray;
 	}
 
 	return max_val;
@@ -627,7 +627,7 @@ QVector3D DataCube::ray_penetrating_point(QVector3D r)
 	a = r.x();
 	b = r.y();
 	c = r.z();
-		
+
 	if (a != 0) {
 		x = 0;
 		y = P_cam.y() + (x - P_cam.x()) * b / a;
@@ -639,10 +639,10 @@ QVector3D DataCube::ray_penetrating_point(QVector3D r)
 				shortest = temp;
 			}
 		}
-		
+
 		x = N_x - 1;
 		y = P_cam.y() + (x - P_cam.x()) * b / a;
-		z = P_cam.z() + (x - P_cam.x()) * c / a;		
+		z = P_cam.z() + (x - P_cam.x()) * c / a;
 		if (0 <= y && y <= N_y - 1 && 0 <= z && z <= N_z - 1) {
 			temp = QVector3D(x, y, z) - P_cam;
 			if (found == 0 || shortest.length() > temp.length()) {
@@ -714,7 +714,7 @@ int DataCube::rotate_DVR_screen(float dx, float dy)
 	P_cam = (m_trans_center_inverse * m_rotate * m_trans_center * QVector4D(P_cam, 1)).toVector3D();
 	ws = (m_rotate * QVector4D(ws, 1)).toVector3D();
 	hs = (m_rotate * QVector4D(hs, 1)).toVector3D();
-	ns = (m_rotate * QVector4D(ns, 1)).toVector3D();	
+	ns = (m_rotate * QVector4D(ns, 1)).toVector3D();
 
 	return 1;
 }
@@ -741,7 +741,7 @@ int DataCube::zoom_DVR_screen(float d)
 }
 
 void DataCube::get_DVR_screen_GPU()
-{		
+{
 	int m_count = 0;
 	QVector3D center, start, temp;
 	QVector3D t1, t2, t3, t4;
@@ -761,7 +761,7 @@ void DataCube::get_DVR_screen_GPU()
 			t3 = temp + hs * pixel_len_s;
 			t4 = t2 + hs * pixel_len_s;
 
-			GLfloat *p = m_data.data() + m_count;			
+			GLfloat *p = m_data.data() + m_count;
 			//*p++ = temp.x();
 			//*p++ = temp.y();
 			//*p++ = temp.z();
@@ -784,7 +784,7 @@ void DataCube::get_DVR_screen_GPU()
 
 			*p++ = t4.x();
 			*p++ = t4.y();
-			*p++ = t4.z();			
+			*p++ = t4.z();
 			*p++ = t3.x();
 			*p++ = t3.y();
 			*p++ = t3.z();
@@ -793,7 +793,7 @@ void DataCube::get_DVR_screen_GPU()
 			*p++ = t2.z();
 
 			m_count += 3 * 6;
-			 
+
 			temp = temp + ws * pixel_len_s;
 		}
 		start = start + hs * pixel_len_s;

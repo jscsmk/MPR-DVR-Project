@@ -37,7 +37,7 @@
 
 Window::Window(MainWindow *mw)
 	: main_window(mw)
-{	
+{
 	/*
 	// set black background
 	QPalette pal = palette();
@@ -45,7 +45,7 @@ Window::Window(MainWindow *mw)
 	this->setAutoFillBackground(true);
 	this->setPalette(pal);
 
-	
+
 	w_browser->setVisible(false);
 	*/
 
@@ -53,7 +53,7 @@ Window::Window(MainWindow *mw)
 	view_size = 512;
 	slice_widget_z = new SliceWidget(0, view_size);
 	slice_widget_x = new SliceWidget(1, view_size);
-	slice_widget_y = new SliceWidget(2, view_size);		
+	slice_widget_y = new SliceWidget(2, view_size);
 	slice_widget_z->setMouseTracking(true);
 	slice_widget_x->setMouseTracking(true);
 	slice_widget_y->setMouseTracking(true);
@@ -65,43 +65,43 @@ Window::Window(MainWindow *mw)
 
 	// add local file browser
 	QString root_path = "c:/vscode_workspace";
-	model = new QFileSystemModel();	
+	model = new QFileSystemModel();
 	model->setRootPath(root_path);
 	const QModelIndex rootIndex = model->index(QDir::cleanPath(root_path));
 
 	tree = new QTreeView();
 	tree->setModel(model);
 	tree->setFixedWidth(280);
-	tree->setExpandsOnDoubleClick(false);	
+	tree->setExpandsOnDoubleClick(false);
 	tree->setHeaderHidden(true);
 
 	if (rootIndex.isValid())
 		tree->setRootIndex(rootIndex);
 
 	for (int i = 1; i < model->columnCount(); ++i)
-		tree->hideColumn(i);		
-	
+		tree->hideColumn(i);
+
 	hideBtn = new QPushButton(tr("<"), this);
-	hideBtn->setFixedSize(20, 100);	
+	hideBtn->setFixedSize(20, 100);
 
 
 	// add menubar for MPR
-	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;	
+	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;
 	QAction *toggle_slice_line_z, *toggle_slice_line_x, *toggle_slice_line_y;
-	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;	
+	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
 	QAction *init_all, *init_geometry, *init_windowing;
 
-	QMenu *toggle_menu_dvr, *init_menu_dvr;	
+	QMenu *toggle_menu_dvr, *init_menu_dvr;
 
 	toggle_slice_line_z = new QAction("show/hide slice lines");
 	toggle_slice_line_x = new QAction("show/hide slice lines");
-	toggle_slice_line_y = new QAction("show/hide slice lines");	
+	toggle_slice_line_y = new QAction("show/hide slice lines");
 	toggle_border_line_z = new QAction("show/hide border lines");
 	toggle_border_line_x = new QAction("show/hide border lines");
 	toggle_border_line_y = new QAction("show/hide border lines");
 	init_all = new QAction("reset all MPR");
 	init_geometry = new QAction("reset geometry");
-	init_windowing = new QAction("reset window level and width");	
+	init_windowing = new QAction("reset window level and width");
 
 	toggle_DVR_border_line = new QAction("show/hide border lines");
 	toggle_DVR_axial_plane = new QAction("show/hide axial slice plane");
@@ -114,17 +114,17 @@ Window::Window(MainWindow *mw)
 
 	toggle_menu_z = new QMenu();
 	toggle_menu_x = new QMenu();
-	toggle_menu_y = new QMenu();	
+	toggle_menu_y = new QMenu();
 	toggle_menu_z->addAction(toggle_slice_line_z);
 	toggle_menu_z->addAction(toggle_border_line_z);
 	toggle_menu_x->addAction(toggle_slice_line_x);
 	toggle_menu_x->addAction(toggle_border_line_x);
 	toggle_menu_y->addAction(toggle_slice_line_y);
-	toggle_menu_y->addAction(toggle_border_line_y);	
+	toggle_menu_y->addAction(toggle_border_line_y);
 
 	init_menu_z = new QMenu();
 	init_menu_x = new QMenu();
-	init_menu_y = new QMenu();	
+	init_menu_y = new QMenu();
 	init_menu_z->addAction(init_all);
 	init_menu_z->addAction(init_geometry);
 	init_menu_z->addAction(init_windowing);
@@ -134,7 +134,7 @@ Window::Window(MainWindow *mw)
 	init_menu_y->addAction(init_all);
 	init_menu_y->addAction(init_geometry);
 	init_menu_y->addAction(init_windowing);
-	
+
 	toggle_menu_dvr = new QMenu();
 	init_menu_dvr = new QMenu();
 	toggle_menu_dvr->addAction(toggle_DVR_mode);
@@ -165,7 +165,7 @@ Window::Window(MainWindow *mw)
 	menubar_layout_x->addWidget(name_x);
 	menubar_layout_y->addWidget(name_y);
 	menubar_layout_dvr->addWidget(name_dvr);
-	
+
 	add_menubar_button(menubar_layout_z, toggle_menu_z, "icons/view.png");
 	add_menubar_button(menubar_layout_z, init_menu_z, "icons/reset.png");
 	add_menubar_button(menubar_layout_x, toggle_menu_x, "icons/view.png");
@@ -173,8 +173,8 @@ Window::Window(MainWindow *mw)
 	add_menubar_button(menubar_layout_y, toggle_menu_y, "icons/view.png");
 	add_menubar_button(menubar_layout_y, init_menu_y, "icons/reset.png");
 	add_menubar_button(menubar_layout_dvr, toggle_menu_dvr, "icons/view.png");
-	add_menubar_button(menubar_layout_dvr, init_menu_dvr, "icons/reset.png");	
-			
+	add_menubar_button(menubar_layout_dvr, init_menu_dvr, "icons/reset.png");
+
 	menubar_z = new QWidget();
 	menubar_x = new QWidget();
 	menubar_y = new QWidget();
@@ -191,7 +191,7 @@ Window::Window(MainWindow *mw)
 
 
 	// add labels
-	selected = new QLabel("Path: ");		
+	selected = new QLabel("Path: ");
 	selected->setAlignment(Qt::AlignLeft);;
 
 	coord_z = create_label(slice_widget_z);
@@ -199,14 +199,14 @@ Window::Window(MainWindow *mw)
 	coord_y = create_label(slice_widget_y);
 	window_z = create_label(slice_widget_z);
 	window_x = create_label(slice_widget_x);
-	window_y = create_label(slice_widget_y);	
-	
+	window_y = create_label(slice_widget_y);
+
 	coord_z->move(2 * view_size - 260, view_size - 40);
 	coord_x->move(2 * view_size - 260, view_size - 40);
 	coord_y->move(2 * view_size - 260, view_size - 40);
 
 
-	
+
 	// add connections
 	connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(get_path()));
 	connect(hideBtn, &QPushButton::clicked, this, &Window::hide_tree);
@@ -216,11 +216,11 @@ Window::Window(MainWindow *mw)
 	connect(toggle_slice_line_y, &QAction::triggered, slice_widget_y, &SliceWidget::toggle_slice_line);
 	connect(toggle_border_line_z, &QAction::triggered, slice_widget_z, &SliceWidget::toggle_border_line);
 	connect(toggle_border_line_x, &QAction::triggered, slice_widget_x, &SliceWidget::toggle_border_line);
-	connect(toggle_border_line_y, &QAction::triggered, slice_widget_y, &SliceWidget::toggle_border_line);	
+	connect(toggle_border_line_y, &QAction::triggered, slice_widget_y, &SliceWidget::toggle_border_line);
 
 	connect(init_all, &QAction::triggered, this, &Window::_init_all);
 	connect(init_geometry, &QAction::triggered, this, &Window::_init_geometry);
-	connect(init_windowing, &QAction::triggered, this, &Window::_init_windowing);		
+	connect(init_windowing, &QAction::triggered, this, &Window::_init_windowing);
 
 	connect(slice_widget_z, SIGNAL(coord_info_sig(QString)), coord_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(coord_info_sig(QString)), coord_x, SLOT(setText(QString)));
@@ -228,11 +228,11 @@ Window::Window(MainWindow *mw)
 
 	connect(slice_widget_z, SIGNAL(windowing_info_sig(QString)), window_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(windowing_info_sig(QString)), window_x, SLOT(setText(QString)));
-	connect(slice_widget_y, SIGNAL(windowing_info_sig(QString)), window_y, SLOT(setText(QString)));	
+	connect(slice_widget_y, SIGNAL(windowing_info_sig(QString)), window_y, SLOT(setText(QString)));
 
-	connect(slice_widget_z, SIGNAL(line_moved_sig(int)), this, SLOT(z_line_moved(int)));	
-	connect(slice_widget_x, SIGNAL(line_moved_sig(int)), this, SLOT(x_line_moved(int)));	
-	connect(slice_widget_y, SIGNAL(line_moved_sig(int)), this, SLOT(y_line_moved(int)));	
+	connect(slice_widget_z, SIGNAL(line_moved_sig(int)), this, SLOT(z_line_moved(int)));
+	connect(slice_widget_x, SIGNAL(line_moved_sig(int)), this, SLOT(x_line_moved(int)));
+	connect(slice_widget_y, SIGNAL(line_moved_sig(int)), this, SLOT(y_line_moved(int)));
 
 	connect(slice_widget_z, SIGNAL(zoom_panning_sig()), this, SLOT(update_dvr_slices()));
 	connect(slice_widget_x, SIGNAL(zoom_panning_sig()), this, SLOT(update_dvr_slices()));
@@ -255,23 +255,23 @@ Window::Window(MainWindow *mw)
 	w_browser = new QWidget;
 
 	container_1->addWidget(selected);
-	container_1->addWidget(tree);	
+	container_1->addWidget(tree);
 	container_1->setMargin(0);
 	w_browser->setLayout(container_1);
-	w_browser->setFixedWidth(280);	
-	
+	w_browser->setFixedWidth(280);
+
 	container_2->addWidget(menubar_z);
 	container_2->addWidget(slice_widget_z);
 	container_2->addWidget(menubar_y);
 	container_2->addWidget(slice_widget_y);
 	container_2->setAlignment(Qt::AlignHCenter);
 	container_2->setSpacing(0);
-	container_2->setMargin(0);		
-	
+	container_2->setMargin(0);
+
 	// add blank image temporalily, instead of DVR widget
 	QString blank_path = "images/blank_image.png";
 	QImage *img = new QImage(blank_path);
-	QPixmap *blank_img = new QPixmap(QPixmap::fromImage(*img));	
+	QPixmap *blank_img = new QPixmap(QPixmap::fromImage(*img));
 	*blank_img = blank_img->scaled(view_size * 7 / 4, view_size);
 
 	blank_dvr = new QLabel();
@@ -281,17 +281,17 @@ Window::Window(MainWindow *mw)
 	container_3->addWidget(slice_widget_x);
 	container_3->addWidget(menubar_dvr);
 	container_3->addWidget(blank_dvr);
-	container_3->setAlignment(Qt::AlignHCenter);	
+	container_3->setAlignment(Qt::AlignHCenter);
 	container_3->setSpacing(0);
 	container_3->setMargin(0);
 
 	mainLayout->addWidget(w_browser);
 	mainLayout->addWidget(hideBtn);
-	mainLayout->addLayout(container_2);	
-	mainLayout->addLayout(container_3);	
+	mainLayout->addLayout(container_2);
+	mainLayout->addLayout(container_3);
 
 	setLayout(mainLayout);
-	this->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);	
+	this->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 	setWindowTitle(tr("Hello GL"));
 }
 
@@ -305,7 +305,7 @@ void Window::hide_tree()
 		w_browser->setVisible(true);
 		hideBtn->setText("<");
 	}
-		
+
 	this->adjustSize();
 	main_window->adjustSize();
 }
@@ -318,7 +318,7 @@ void Window::_init_geometry()
 	slice_widget_x->get_slice();
 	slice_widget_y->get_slice();
 
-	update_dvr_slices();	
+	update_dvr_slices();
 }
 void Window::_init_windowing()
 {
@@ -336,7 +336,7 @@ void Window::_init_all()
 }
 
 void Window::get_path()
-{	
+{
 	QModelIndex index = tree->currentIndex();
 	QString cur_path = model->filePath(index);
 	QModelIndex p_idx = model->index(cur_path);
@@ -346,23 +346,23 @@ void Window::get_path()
 		connect(tree, SIGNAL(expanded(index)), loop_1, SLOT(quit()));
 		connect(model, SIGNAL(directoryLoaded(QString)), loop_1, SLOT(quit()));
 
-		tree->expand(index);		
-		loop_1->exec();		
-		tree->collapse(index);				
+		tree->expand(index);
+		loop_1->exec();
+		tree->collapse(index);
 	}
-	*/	
+	*/
 
 	int num_rows, img_count, img_w, img_h, diff_count, rescale_intercept, rescale_slope;
 	num_rows = model->rowCount(p_idx);
 	diff_count = 0;
 	img_count = 0;
 	img_w = -1;
-	img_h = -1;		
+	img_h = -1;
 
 	selected->setText("Path: " + cur_path);
 	file_list = {};
 
-	for (int i = 0; i < num_rows; ++i) {		
+	for (int i = 0; i < num_rows; ++i) {
 		QModelIndex childIndex = model->index(i, 0, p_idx);
 		QString file_name = model->data(childIndex).toString();
 		QFileInfo fi(file_name);
@@ -373,12 +373,12 @@ void Window::get_path()
 			img_count++;
 
 			// get image width, height, and rescale values from DICOM tag
-			// rescaling to HU unit: see https://dicom.innolitics.com/ciods/ct-image/ct-image/00281052)			
+			// rescaling to HU unit: see https://dicom.innolitics.com/ciods/ct-image/ct-image/00281052)
 			gdcm::Reader reader;
 			reader.SetFileName(file_path.toStdString().c_str());
 			reader.Read();
 			gdcm::File &file = reader.GetFile();
-			gdcm::DataSet &ds = file.GetDataSet();			
+			gdcm::DataSet &ds = file.GetDataSet();
 			gdcm::Attribute<0x0028, 0x0010> at_rows;
 			gdcm::Attribute<0x0028, 0x0011> at_cols;
 			gdcm::Attribute<0x0028, 0x1052> at_rescale_intercept;
@@ -434,7 +434,7 @@ void Window::get_path()
 			else if (img_w != w || img_h != h) {
 				diff_wh++;
 			}
-		}*/		
+		}*/
 	}
 
 	if (img_count == 0 || diff_count > 0) { // invalid case
@@ -444,17 +444,17 @@ void Window::get_path()
 		menubar_dvr->setEnabled(false);
 	}
 	else {
-		load_images(img_count, img_w, img_h, rescale_slope, rescale_intercept);		
+		load_images(img_count, img_w, img_h, rescale_slope, rescale_intercept);
 
 		menubar_z->setEnabled(true);
 		menubar_x->setEnabled(true);
 		menubar_y->setEnabled(true);
 		menubar_dvr->setEnabled(true);
-	}	
+	}
 }
 
 void Window::load_images(int z, int x, int y, int a, int b)
-{	
+{
 	free(data_3d);
 	data_3d = (int*)malloc(z * x * y * sizeof(int));
 
@@ -488,10 +488,10 @@ void Window::load_images(int z, int x, int y, int a, int b)
 					data_3d[x*y*i + x * j + k] = (int)stored_pixel_value;
 					buffer16++;
 
-					if (p_max < stored_pixel_value)					
+					if (p_max < stored_pixel_value)
 						p_max = stored_pixel_value;
 					if (p_min > stored_pixel_value)
-						p_min = stored_pixel_value;					
+						p_min = stored_pixel_value;
 				}
 			}
 		}
@@ -509,19 +509,19 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		}*/
 	}
 	//selected->setText(QString::number(p_min) + ", " + QString::number(p_max));
-	
+
 
 	int slice_pixel_num = 512;
 	int dvr_pixel_num = 512;
 	float unit_ray_len = 1;
 
-	data_cube->set_data(data_3d, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);		
+	data_cube->set_data(data_3d, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);
 
 	slice_widget_z->set_data(data_cube);
 	slice_widget_x->set_data(data_cube);
-	slice_widget_y->set_data(data_cube);		
+	slice_widget_y->set_data(data_cube);
 
-	if (!dvr_widget) {		
+	if (!dvr_widget) {
 		container_3->removeItem(container_3->itemAt(3));
 		blank_dvr->setVisible(false);
 
@@ -530,7 +530,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		dvr_widget->setMouseTracking(true);
 
 		window_dvr = create_label(dvr_widget);
-		coord_dvr = create_label(dvr_widget);		
+		coord_dvr = create_label(dvr_widget);
 		coord_dvr->move(2 * view_size - 260, view_size - 40);
 
 		connect(dvr_widget, SIGNAL(coord_info_sig(QString)), coord_dvr, SLOT(setText(QString)));
@@ -545,7 +545,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		connect(toggle_DVR_coronal_plane, &QAction::triggered, dvr_widget, &DVRWidget::toggle_coronal_slice);
 
 		container_3->addWidget(dvr_widget);
-	}	
+	}
 	else {
 		dvr_widget->set_data(data_cube, unit_ray_len, a, b);
 		window_dvr->setParent(dvr_widget);
@@ -558,9 +558,9 @@ void Window::load_images(int z, int x, int y, int a, int b)
 QLabel *Window::create_label(QWidget *sw)
 {
 	QLabel *label = new QLabel;
-	label->setFixedSize(150, 30);	
-	label->setParent(sw);	
-	label->move(10, view_size - 40);	
+	label->setFixedSize(150, 30);
+	label->setParent(sw);
+	label->move(10, view_size - 40);
 
 	QPalette pal = palette();
 	pal.setColor(label->foregroundRole(), Qt::white);
@@ -570,8 +570,8 @@ QLabel *Window::create_label(QWidget *sw)
 }
 
 QHBoxLayout *Window::create_menubar()
-{	
-	QHBoxLayout *menubar_layout = new QHBoxLayout;	
+{
+	QHBoxLayout *menubar_layout = new QHBoxLayout;
 	menubar_layout->setAlignment(Qt::AlignRight);
 	menubar_layout->setSpacing(0);
 	menubar_layout->setMargin(0);
@@ -585,7 +585,7 @@ void Window::add_menubar_button(QHBoxLayout *m_layout, QMenu *m, QString icon_pa
 	new_button->setStyleSheet("text-align:left;");
 	new_button->setIcon(QIcon(icon_path));
 	new_button->setIconSize(QSize(20, 20));
-	new_button->setMenu(m);		
+	new_button->setMenu(m);
 
 	m_layout->addWidget(new_button);
 }
@@ -602,7 +602,7 @@ void Window::z_line_moved(int which)
 	}
 	else if (which == 1) { // h line moved
 		slice_widget_x->set_pixmap();
-		slice_widget_y->get_slice(); 
+		slice_widget_y->get_slice();
 	}
 	else { // wheel event
 		slice_widget_x->set_pixmap();
@@ -615,7 +615,7 @@ void Window::x_line_moved(int which)
 {
 	if (which == 2) { // both moved
 		slice_widget_z->get_slice();
-		slice_widget_y->get_slice();		
+		slice_widget_y->get_slice();
 	}
 	else if (which == 0) { // v line moved
 		slice_widget_z->get_slice();

@@ -76,12 +76,12 @@ DVRWidget::DVRWidget(DataCube *d, float r, int a, int b, int p, int s)
 		}
 	}
 
-	is_first = true;	
+	is_first = true;
 
 	tex_3d_data = NULL;
 	tex_3d_border = NULL;
 	tex_slice_depth = NULL;
-	
+
 	m_program = new QOpenGLShaderProgram;
 	m_program_2 = new QOpenGLShaderProgram;
 	m_texture = new QOpenGLTexture(QOpenGLTexture::Target3D);
@@ -106,16 +106,16 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 	sagittal_slice_visible = false;
 	coronal_slice_visible = false;
 
-	data_cube = d;	
+	data_cube = d;
 	unit_ray_len = r;
 	rescale_slope = a;
 	rescale_intercept = b;
 
 	tie(N_x, N_y, N_z, slice_thickness) = data_cube->get_data_size();
-	N_max = max(N_x, max(N_y, (int)(N_z * slice_thickness)));	
-	screen_dist = N_max * 5;	
+	N_max = max(N_x, max(N_y, (int)(N_z * slice_thickness)));
+	screen_dist = N_max * 5;
 
-	int *raw = data_cube->get_raw_data();	
+	int *raw = data_cube->get_raw_data();
 
 	free(tex_3d_data);
 	free(tex_3d_border);
@@ -132,7 +132,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 			temp = 32767;
 
 		tex_3d_data[i] = temp;
-	}	
+	}
 
 	int t = 3;
 	tex_3d_border = new short[N_x * N_y * N_z];
@@ -150,14 +150,14 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 				tex_3d_border[N_x * N_y * k + N_x * j + i] = temp;
 			}
 		}
-	}	
+	}
 
 	m_trans_center.setToIdentity();
 	m_trans_center.translate(QVector3D(-N_x / 2, -N_y / 2, -N_z * slice_thickness / 2));
 	m_trans_center_inverse.setToIdentity();
 	m_trans_center_inverse.translate(QVector3D(N_x / 2, N_y / 2, N_z * slice_thickness / 2));
-			
-	tie(qz, nz, wz, hz, L_z, qx, nx, wx, hx, L_x, qy, ny, wy, hy, L_y) = data_cube->get_slice_info();	
+
+	tie(qz, nz, wz, hz, L_z, qx, nx, wx, hx, L_x, qy, ny, wy, hy, L_y) = data_cube->get_slice_info();
 
 	_init_windowing();
 	_init_geometry();
@@ -247,12 +247,12 @@ void DVRWidget::_init_geometry()
 	L_s = N_max;
 	pixel_len_s = L_s / (dvr_pixel_num - 1);
 	cur_center_x = screen_size * 7 / 8;
-	cur_center_y = screen_size / 2;	
+	cur_center_y = screen_size / 2;
 
 	P_screen = QVector3D(N_x / 2, N_y / 2, N_z * slice_thickness / 2) + QVector3D(L_s * 7 / 8, -screen_dist, L_s / 2);
 	ws = QVector3D(-1, 0, 0);
 	hs = QVector3D(0, 0, -1);
-	ns = QVector3D(0, 1, 0);	
+	ns = QVector3D(0, 1, 0);
 }
 
 void DVRWidget::_init_windowing()
@@ -268,11 +268,11 @@ void DVRWidget::get_slice_info()
 }
 
 void DVRWidget::initializeGL()
-{	
+{
 	connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &DVRWidget::cleanup);
 	initializeOpenGLFunctions();
 	glClearColor(0, 0, 0, 1);
-		
+
 	// set shader program
 	m_program->removeAllShaders();
 	m_program->addShaderFromSourceFile(QOpenGLShader::Vertex, "shaders/ray_casting.vert");
@@ -323,7 +323,7 @@ void DVRWidget::initializeGL()
 
 	// Our camera never changes in this example.
 	m_camera.setToIdentity();
-	m_camera.translate(-dvr_pixel_num * 7 / 8, -dvr_pixel_num/2, -dvr_pixel_num * 1.2);		
+	m_camera.translate(-dvr_pixel_num * 7 / 8, -dvr_pixel_num/2, -dvr_pixel_num * 1.2);
 
 	m_program->release();
 
@@ -368,10 +368,10 @@ void DVRWidget::initializeGL()
 	// Store the vertex attribute bindings for the program.
 	setupAttribs(&m_vbo_2);
 
-	set_slice_texture();	
+	set_slice_texture();
 
-	m_program_2->release();	
-		
+	m_program_2->release();
+
 	is_first = false;
 }
 
@@ -380,7 +380,7 @@ void DVRWidget::setupAttribs(QOpenGLBuffer *b)
 	b->bind();
 	QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
 	f->glEnableVertexAttribArray(0);
-	f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);	
+	f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), 0);
 	b->release();
 }
 
@@ -406,7 +406,7 @@ void DVRWidget::set_tex_samplers()
 	m_texture_border->setBorderColor(QColor(0, 0, 0));
 	m_texture_border->setWrapMode(QOpenGLTexture::ClampToBorder);
 	m_texture_border->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
-	m_texture_border->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_3d_border);	
+	m_texture_border->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_3d_border);
 }
 
 void DVRWidget::set_slice_texture()
@@ -424,9 +424,9 @@ void DVRWidget::set_slice_texture()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, screen_size * 7 / 4, screen_size, 0, GL_RGB, GL_FLOAT, NULL);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, screen_size * 7 / 4, screen_size, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0); // release	
+	glBindTexture(GL_TEXTURE_2D, 0); // release
 
-	//glDeleteRenderbuffers(1, &m_depthbuffer);	
+	//glDeleteRenderbuffers(1, &m_depthbuffer);
 	glGenRenderbuffers(1, &m_depthbuffer);
 	glEnable(GL_RENDERBUFFER);
 	glBindRenderbuffer(GL_RENDERBUFFER, m_depthbuffer);
@@ -442,8 +442,8 @@ void DVRWidget::set_slice_texture()
 }
 
 void DVRWidget::paintGL()
-{		
-	// build slice depth texture(CPU)	
+{
+	// build slice depth texture(CPU)
 	/*
 	float depth, pr;
 	QVector3D vec_from_q, pr_w, pr_h;
@@ -451,7 +451,7 @@ void DVRWidget::paintGL()
 
 	for (int j = 0; j < dvr_pixel_num; j++) {
 		QVector3D temp_col = temp_row;
-		for (int i = 0; i < dvr_pixel_num * 7 / 4; i++) {	
+		for (int i = 0; i < dvr_pixel_num * 7 / 4; i++) {
 			int idx = j * dvr_pixel_num * 7 / 4 + i;
 
 			depth = (QVector3D::dotProduct(qx, nx) - QVector3D::dotProduct(temp_col, nx)) / QVector3D::dotProduct(ns, nx);
@@ -483,27 +483,27 @@ void DVRWidget::paintGL()
 			pr = QVector3D::dotProduct(wz, vec_from_q);
 			pr_w = wz * pr;
 			pr_h = vec_from_q - pr_w;
-			
+
 			// check range
 			if (QVector3D::dotProduct(pr_w, wz) < 0 || QVector3D::dotProduct(pr_h, hz) < 0 || pr_w.length() > L_z * 7 / 4 || pr_h.length() > L_z)
 				tex_slice_depth[3 * idx + 2] = 0;
-			else 
+			else
 				tex_slice_depth[3 * idx + 2] = (short)depth;
 
 			temp_col += ws * pixel_len_s;
 		}
 		temp_row += hs * pixel_len_s;
 	}
-	
+
 	//m_texture_slice->setData(QOpenGLTexture::RGB, QOpenGLTexture::Int16, tex_slice_depth);
 	*/
 
 
 	// start painting
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	
 
-	// first pass	
+
+	// first pass
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebuffer);
 	QOpenGLVertexArrayObject::Binder vaoBinder_2(&m_vao_2);
 	m_program_2->bind();
@@ -541,7 +541,7 @@ void DVRWidget::paintGL()
 	glViewport(0, 0, screen_size * 7 / 4, screen_size);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * dvr_pixel_num * dvr_pixel_num * 7 / 4);
 	m_program_2->release();
-	
+
 
 	// second pass
 	glBindFramebuffer(GL_FRAMEBUFFER, this->defaultFramebufferObject());
@@ -555,7 +555,7 @@ void DVRWidget::paintGL()
 	glEnable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D, m_target_texture);
 	m_program->setUniformValue("slice_data", GL_TEXTURE0);
-	   
+
 	m_program->setUniformValue(m_mvMatrixLoc, m_camera);
 	m_program->setUniformValue(x_loc, N_x);
 	m_program->setUniformValue(y_loc, N_y);
@@ -568,7 +568,7 @@ void DVRWidget::paintGL()
 	m_program->setUniformValue(v_height_loc, hs * pixel_len_s);
 	m_program->setUniformValue(v_normal_loc, ns * unit_ray_len);
 	m_program->setUniformValue(window_level_loc, (window_level + 1000) / 4096);
-	m_program->setUniformValue(window_width_loc, window_width / 4096);	
+	m_program->setUniformValue(window_width_loc, window_width / 4096);
 	m_program->setUniformValue(mode_loc, mode);
 	m_program->setUniformValue(border_visible_loc, border_line_visible);
 	m_program->setUniformValue(axial_visible_loc, axial_slice_visible);
@@ -577,18 +577,18 @@ void DVRWidget::paintGL()
 	m_texture->bind(2);
 	m_texture_border->bind(3);
 	m_program->setUniformValue("volume_data", 2);
-	m_program->setUniformValue("border_data", 3);	
+	m_program->setUniformValue("border_data", 3);
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glViewport(0, 0, screen_size * 7 / 4, screen_size);
 	glDrawArrays(GL_TRIANGLES, 0, 6 * dvr_pixel_num * dvr_pixel_num * 7 / 4);
-		
+
 	m_texture->release();
 	m_texture_border->release();
 	m_program->release();
-	glBindTexture(GL_TEXTURE_2D, 0);	
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 
 	// emit windowing info
@@ -610,10 +610,10 @@ void DVRWidget::mousePressEvent(QMouseEvent *event)
 }
 
 void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
-{	
-	if (event->buttons() & Qt::LeftButton) { // when left clicked = rotation	
+{
+	if (event->buttons() & Qt::LeftButton) { // when left clicked = rotation
 		QVector3D arcball_pos = get_arcball_pos(event->x(), event->y());
-		QVector3D arcball_d = arcball_pos - arcball_last_pos;		
+		QVector3D arcball_d = arcball_pos - arcball_last_pos;
 		float d = arcball_d.length();
 		float arcball_radius = 500.0 * screen_size / L_s;
 		float a = acos(1 - d * d / (2 * arcball_radius * arcball_radius));
@@ -622,7 +622,7 @@ void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
 
 		QMatrix4x4 m_rotate;
 		m_rotate.setToIdentity();
-		m_rotate.rotate(a * 2 * 180 / PI, rotate_axis);		
+		m_rotate.rotate(a * 2 * 180 / PI, rotate_axis);
 
 		P_screen = (m_trans_center_inverse * m_rotate * m_trans_center * QVector4D(P_screen, 1)).toVector3D();
 		ws = (m_rotate * QVector4D(ws, 1)).toVector3D();
@@ -636,7 +636,7 @@ void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
 	}
 	else if (event->buttons() & Qt::RightButton) { // when Right clicked = windowing
 		float dx = (float)(event->x() - mouse_last_x);
-		float dy = (float)(mouse_last_y - event->y());		
+		float dy = (float)(mouse_last_y - event->y());
 		window_width += dx;
 		window_level += dy;
 
@@ -651,9 +651,9 @@ void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
 
 		mouse_last_x = event->x();
 		mouse_last_y = event->y();
-		update();		
+		update();
 	}
-	else if (event->buttons() & Qt::MidButton) { // when mid(wheel) pressed = panning		
+	else if (event->buttons() & Qt::MidButton) { // when mid(wheel) pressed = panning
 		float dx = (float)(event->x() - mouse_last_x);
 		float dy = (float)(event->y() - mouse_last_y);
 		cur_center_x += dx;
@@ -664,7 +664,7 @@ void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
 		P_screen = P_screen - dx * ws + dy * hs;
 
 		mouse_last_x = event->x();
-		mouse_last_y = event->y();				
+		mouse_last_y = event->y();
 		update();
 	}
 }
@@ -676,12 +676,12 @@ void DVRWidget::wheelEvent(QWheelEvent *event) // when wheel scrolled = zooming
 	int d = 24;
 
 	if (wheel_delta > 0)
-		d *= -1;			
+		d *= -1;
 
 	if (L_s + d < N_max / 10 || 4 * N_max < L_s + d)
 		return;
 
-	P_screen -= (ws * 7 / 4 + hs) * d / 2;	
+	P_screen -= (ws * 7 / 4 + hs) * d / 2;
 	cur_center_x = (cur_center_x * L_s / screen_size + d * 7 / 8) * screen_size / (L_s + d);
 	cur_center_y = (cur_center_y * L_s / screen_size + d / 2) * screen_size / (L_s + d);
 	L_s += d;
@@ -689,7 +689,7 @@ void DVRWidget::wheelEvent(QWheelEvent *event) // when wheel scrolled = zooming
 	update();
 }
 
-QVector3D DVRWidget::get_arcball_pos(int m_x, int m_y) 
+QVector3D DVRWidget::get_arcball_pos(int m_x, int m_y)
 {
 	float x = m_x - cur_center_x;
 	float y = m_y - cur_center_y;

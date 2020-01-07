@@ -11,13 +11,13 @@ class MainWindow;
 class QPixmap;
 class DataCube;
 
-class SliceWidget : public QLabel 
+class SliceWidget : public QLabel
 {
 	Q_OBJECT
 
 public:
 	SliceWidget(int t, int s);
-	void set_data(DataCube *d);		
+	void set_data(DataCube *d);
 	void get_slice();
 	void apply_windowing();
 	void set_pixmap();
@@ -31,7 +31,7 @@ public slots:
 signals:
 	void coord_info_sig(QString msg);
 	void windowing_info_sig(QString msg);
-	void line_moved_sig(int which); // which = 0: v-line, 1: h-line, 2: both-line, 3: wheel event	
+	void line_moved_sig(int which); // which = 0: v-line, 1: h-line, 2: both-line, 3: wheel event
 	void zoom_panning_sig();
 	void windowing_changed_sig(int wl, int ww);
 
@@ -60,7 +60,7 @@ private:
 	float get_mouse_angle(int mouse_x, int mouse_y);
 	int window_level, window_width;
 	int window_changed, zoom_changed;
-	QPixmap *img_buffer;	
+	QPixmap *img_buffer;
 };
 
 #endif
