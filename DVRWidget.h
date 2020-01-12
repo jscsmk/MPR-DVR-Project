@@ -32,6 +32,7 @@ public slots:
 	void init_windowing();
 	void cleanup();
 	void toggle_mode();
+	void toggle_skipping();
 	void toggle_border_line();
 	void toggle_axial_slice();
 	void toggle_sagittal_slice();
@@ -66,14 +67,16 @@ private:
 	QVector3D P_screen, ns, ws, hs;
 	QVector3D qz, nz, wz, hz, qx, nx, wx, hx, qy, ny, wy, hy;
 	QVector<GLfloat> m_data, m_data_2;
-	short *tex_3d_data, *tex_3d_border, *tex_slice_depth;
+	short *tex_3d_data, *tex_3d_border, *tex_slice_depth, *tex_octree;
 	int N_x, N_y, N_z, N_max, L_z, L_x, L_y,
 		screen_size,
 		dvr_pixel_num,
 		rescale_slope, rescale_intercept,	// dicom pixel rescale values
+		octree_depth, octree_length,
 		mouse_last_x, mouse_last_y;
 	bool is_first,
-		 mode,	// flase: OTF, true: MIP
+		 mode,	// false: OTF, true: MIP
+		 skipping, // false: none, true: empty-space-skipping with octree
 		 border_line_visible,
 		 axial_slice_visible,
 		 sagittal_slice_visible,
@@ -115,7 +118,7 @@ private:
 		L_y_loc,
 		L_z_loc;
 
-	QOpenGLTexture *m_texture, *m_texture_border, *m_texture_slice;
+	QOpenGLTexture *m_texture, *m_texture_border, *m_texture_slice, *m_texture_octree;
 	QMatrix4x4 m_proj, m_camera, m_trans_center, m_trans_center_inverse;
 };
 #endif

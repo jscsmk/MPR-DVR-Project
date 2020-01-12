@@ -108,6 +108,7 @@ Window::Window(MainWindow *mw)
 	toggle_DVR_sagittal_plane = new QAction("show/hide sagittal slice plane");
 	toggle_DVR_coronal_plane = new QAction("show/hide coronal slice plane");
 	toggle_DVR_mode = new QAction("toggle OTF/MIP mode");
+	toggle_DVR_skipping = new QAction("on/off empty-space skipping");
 	init_DVR_all = new QAction("reset DVR");
 	init_DVR_geometry = new QAction("reset geometry");
 	init_DVR_windowing = new QAction("reset window level and width");
@@ -138,6 +139,7 @@ Window::Window(MainWindow *mw)
 	toggle_menu_dvr = new QMenu();
 	init_menu_dvr = new QMenu();
 	toggle_menu_dvr->addAction(toggle_DVR_mode);
+	toggle_menu_dvr->addAction(toggle_DVR_skipping);
 	toggle_menu_dvr->addAction(toggle_DVR_axial_plane);
 	toggle_menu_dvr->addAction(toggle_DVR_sagittal_plane);
 	toggle_menu_dvr->addAction(toggle_DVR_coronal_plane);
@@ -539,6 +541,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		connect(init_DVR_geometry, &QAction::triggered, dvr_widget, &DVRWidget::init_geometry);
 		connect(init_DVR_windowing, &QAction::triggered, dvr_widget, &DVRWidget::init_windowing);
 		connect(toggle_DVR_mode, &QAction::triggered, dvr_widget, &DVRWidget::toggle_mode);
+		connect(toggle_DVR_skipping, &QAction::triggered, dvr_widget, &DVRWidget::toggle_skipping);
 		connect(toggle_DVR_border_line, &QAction::triggered, dvr_widget, &DVRWidget::toggle_border_line);
 		connect(toggle_DVR_axial_plane, &QAction::triggered, dvr_widget, &DVRWidget::toggle_axial_slice);
 		connect(toggle_DVR_sagittal_plane, &QAction::triggered, dvr_widget, &DVRWidget::toggle_sagittal_slice);

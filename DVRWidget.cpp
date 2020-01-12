@@ -81,14 +81,19 @@ DVRWidget::DVRWidget(DataCube *d, float r, int a, int b, int p, int s)
 	tex_3d_data = NULL;
 	tex_3d_border = NULL;
 	tex_slice_depth = NULL;
+	tex_octree = NULL;
 
 	m_program = new QOpenGLShaderProgram;
 	m_program_2 = new QOpenGLShaderProgram;
 	m_texture = new QOpenGLTexture(QOpenGLTexture::Target3D);
 	m_texture_border = new QOpenGLTexture(QOpenGLTexture::Target3D);
 	m_texture_slice = new QOpenGLTexture(QOpenGLTexture::Target2D);
+	m_texture_octree = new QOpenGLTexture(QOpenGLTexture::Target2D);
 
 	tex_slice_depth = new short[3 * dvr_pixel_num * dvr_pixel_num * 7 / 4];
+
+	octree_depth = 3; // min = 0
+	octree_length = pow(8, octree_depth + 1) / 7;
 
 	set_data(d, r, a, b);
 }
@@ -101,6 +106,7 @@ DVRWidget::~DVRWidget()
 void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 {
 	mode = false;
+	skipping = false;
 	border_line_visible = false;
 	axial_slice_visible = false;
 	sagittal_slice_visible = false;
@@ -119,7 +125,9 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 
 	free(tex_3d_data);
 	free(tex_3d_border);
+	free(tex_octree);
 
+	// build tex data of 3d volume data
 	tex_3d_data = new short[N_x * N_y * N_z];
 	for (int i = 0; i < N_x * N_y * N_z; i++) {
 		int temp = raw[i];
@@ -134,6 +142,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 		tex_3d_data[i] = temp;
 	}
 
+	// build tex data of border data
 	int t = 3;
 	tex_3d_border = new short[N_x * N_y * N_z];
 	for (int k = 0; k < N_z; k++) {
@@ -150,6 +159,22 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 				tex_3d_border[N_x * N_y * k + N_x * j + i] = temp;
 			}
 		}
+	}
+
+	// build tex data of octree
+	int cur_depth = 0;
+	int cur_depth_limit = 1;
+	tex_octree = new short[octree_length * 3]; // size: 3 * (1 + 8 + 8^2 + ... + 8^n)
+	for (int i = 0; i < octree_length; i++) {
+		if (i == cur_depth_limit) {
+			cur_depth++;
+			cur_depth_limit += pow(8, cur_depth);
+		}
+
+		tex_octree[3 * i] = cur_depth;
+		//TODO: set min and max values
+		tex_octree[3 * i + 1] = 0;
+		tex_octree[3 * i + 2] = 32767;
 	}
 
 	m_trans_center.setToIdentity();
@@ -202,6 +227,11 @@ void DVRWidget::cleanup()
 void DVRWidget::toggle_mode()
 {
 	mode = mode ? false : true;
+	update();
+}
+void DVRWidget::toggle_skipping()
+{
+	skipping = skipping ? false : true;
 	update();
 }
 void DVRWidget::toggle_border_line()
@@ -407,6 +437,16 @@ void DVRWidget::set_tex_samplers()
 	m_texture_border->setWrapMode(QOpenGLTexture::ClampToBorder);
 	m_texture_border->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
 	m_texture_border->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_3d_border);
+
+	// set octree sampler
+	m_texture_octree->destroy();
+	m_texture_octree->create();
+	m_texture_octree->setSize(octree_length, 3);
+	m_texture_octree->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+	m_texture_octree->setFormat(QOpenGLTexture::R16_UNorm);
+	m_texture_octree->setWrapMode(QOpenGLTexture::ClampToEdge);
+	m_texture_octree->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
+	m_texture_octree->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_octree);
 }
 
 void DVRWidget::set_slice_texture()
@@ -570,14 +610,18 @@ void DVRWidget::paintGL()
 	m_program->setUniformValue(window_level_loc, (window_level + 1000) / 4096);
 	m_program->setUniformValue(window_width_loc, window_width / 4096);
 	m_program->setUniformValue(mode_loc, mode);
+	m_program->setUniformValue(m_program->uniformLocation("skipping"), skipping);
 	m_program->setUniformValue(border_visible_loc, border_line_visible);
 	m_program->setUniformValue(axial_visible_loc, axial_slice_visible);
 	m_program->setUniformValue(sagittal_visible_loc, sagittal_slice_visible);
 	m_program->setUniformValue(coronal_visible_loc, coronal_slice_visible);
+	m_program->setUniformValue(m_program->uniformLocation("octree_length"), octree_length);
 	m_texture->bind(2);
 	m_texture_border->bind(3);
+	m_texture_octree->bind(4);
 	m_program->setUniformValue("volume_data", 2);
 	m_program->setUniformValue("border_data", 3);
+	m_program->setUniformValue("octree_data", 4);
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -587,6 +631,7 @@ void DVRWidget::paintGL()
 
 	m_texture->release();
 	m_texture_border->release();
+	m_texture_octree->release();
 	m_program->release();
 	glBindTexture(GL_TEXTURE_2D, 0);
 

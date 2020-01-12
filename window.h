@@ -76,7 +76,7 @@ private:
 	QVBoxLayout *container_3;
 	QLabel *blank_dvr;
 	QAction *init_DVR_all, *init_DVR_geometry, *init_DVR_windowing;
-	QAction *toggle_DVR_mode, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
+	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
 	int *data_3d;
 };
 
