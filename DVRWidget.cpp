@@ -616,6 +616,7 @@ void DVRWidget::paintGL()
 	m_program->setUniformValue(sagittal_visible_loc, sagittal_slice_visible);
 	m_program->setUniformValue(coronal_visible_loc, coronal_slice_visible);
 	m_program->setUniformValue(m_program->uniformLocation("octree_length"), octree_length);
+	m_program->setUniformValue(m_program->uniformLocation("octree_max_depth"), octree_depth);
 	m_texture->bind(2);
 	m_texture_border->bind(3);
 	m_texture_octree->bind(4);

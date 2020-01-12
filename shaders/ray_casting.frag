@@ -7,6 +7,7 @@ uniform sampler2D octree_data;
 uniform int N_x;
 uniform int N_y;
 uniform int N_z;
+uniform int octree_max_depth;
 uniform int octree_length;
 uniform float slice_thickness;
 uniform vec3 P_screen;
@@ -195,16 +196,62 @@ void main()
 		}
 	}
 
-	float t_front, t_back, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z, tm_x, tm_y, tm_z;
+	// build octree stack
+	int octree_idx_stack[4 * 3];
+	vec3 octree_t0_stack[4 * 3];
+	vec3 octree_t1_stack[4 * 3];
+	int stack_top;
+	float t_front, t_back, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z;
+
 	get_t_front_back(1, N_x-1, 0, N_y-1, 0, slice_thickness * N_z - 1, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z);
-	tm_x = isinf(t0_x) ? 1.0 / 0.0 : (t0_x + t1_x) / 2;
-	tm_y = isinf(t0_y) ? 1.0 / 0.0 : (t0_y + t1_y) / 2;
-	tm_z = isinf(t0_z) ? 1.0 / 0.0 : (t0_z + t1_z) / 2;
+	//tm_x = isinf(t0_x) ? 1.0 / 0.0 : (t0_x + t1_x) / 2;
+	//tm_y = isinf(t0_y) ? 1.0 / 0.0 : (t0_y + t1_y) / 2;
+	//tm_z = isinf(t0_z) ? 1.0 / 0.0 : (t0_z + t1_z) / 2;
 	t_front = max(t0_x, max(t0_y, t0_z));
 	t_back = min(t1_x, min(t1_y, t1_z));
 
-	if (t_front < t_back)
-		sample_through(t_front, t_back);
+	if (t_front <= t_back) {
+		octree_idx_stack[0] = 0;
+		octree_t0_stack[0] = vec3(t0_x, t0_y, t0_z);
+		octree_t1_stack[0] = vec3(t1_x, t1_y, t1_z);
+		stack_top = 0;
+	}
+	else // no intersection with 3d data
+		stack_top = -1;
+
+	//if (t_front < t_back)
+	//	sample_through(t_front, t_back);
+
+	// start sampling
+	while (stack_top >= 0) {
+		int cur_idx, cur_depth;
+		vec3 cur_t0, cur_t1;
+		float s_min, s_max;
+
+		// pop from stack
+		cur_idx = octree_idx_stack[stack_top];
+		cur_t0 = octree_t0_stack[stack_top];
+		cur_t1 = octree_t1_stack[stack_top];
+		stack_top--;
+
+		// lookup from octree texture
+		cur_depth = int((texture(octree_data, vec2(cur_idx / octree_length, 0)).x * 65535 - 1) / 2);
+		s_min = texture(octree_data, vec2(cur_idx / octree_length, 0.5)).x;
+		s_max = texture(octree_data, vec2(cur_idx / octree_length, 1)).x;
+
+		// if no match with transfer function, move on
+		if (s_max < window_level - window_width / 2 || window_level + window_width / 2 < s_min)
+			continue;
+
+		// if leaf node, sample through
+		//if (cur_depth == octree_max_depth)
+		if (cur_depth == 0) {
+			t_front = max(cur_t0.x, max(cur_t0.y, cur_t0.z));
+			t_back = min(cur_t1.x, min(cur_t1.y, cur_t1.z));
+			sample_through(t_front, t_back);
+		}
+	}
+
 
 	// blend slice plane if not passed through yet
 	for (int i = 0; i < 3; i++) {
@@ -215,6 +262,7 @@ void main()
 	}
 
 	// determine final color value
+	// TODO: deal with border lines
 	if (!mode) { // OTF mode
 		//if (border_type == 1)
 		//	accumulated_intensity += accumulated_opacity * vec3(1.0f, 0.0f, 1.0f);
