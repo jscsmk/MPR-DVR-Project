@@ -2,8 +2,9 @@
 
 uniform sampler2D slice_data;
 uniform sampler3D volume_data;
-uniform sampler3D border_data;
-uniform sampler2D octree_data;
+//uniform sampler3D border_data;
+uniform sampler1D octree_smin_data;
+uniform sampler1D octree_smax_data;
 uniform int N_x;
 uniform int N_y;
 uniform int N_z;
@@ -98,7 +99,7 @@ int get_first_child_idx(int idx, int depth)
 		i++;
 	}
 
-	first_child_idx += pow(8, depth) + 7 * sib_idx;
+	first_child_idx += int(pow(8, depth)) + 7 * sib_idx;
 	return first_child_idx;
 }
 
@@ -204,9 +205,6 @@ void main()
 	float t_front, t_back, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z;
 
 	get_t_front_back(1, N_x-1, 0, N_y-1, 0, slice_thickness * N_z - 1, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z);
-	//tm_x = isinf(t0_x) ? 1.0 / 0.0 : (t0_x + t1_x) / 2;
-	//tm_y = isinf(t0_y) ? 1.0 / 0.0 : (t0_y + t1_y) / 2;
-	//tm_z = isinf(t0_z) ? 1.0 / 0.0 : (t0_z + t1_z) / 2;
 	t_front = max(t0_x, max(t0_y, t0_z));
 	t_back = min(t1_x, min(t1_y, t1_z));
 
@@ -235,20 +233,114 @@ void main()
 		stack_top--;
 
 		// lookup from octree texture
-		cur_depth = int((texture(octree_data, vec2(cur_idx / octree_length, 0)).x * 65535 - 1) / 2);
-		s_min = texture(octree_data, vec2(cur_idx / octree_length, 0.5)).x;
-		s_max = texture(octree_data, vec2(cur_idx / octree_length, 1)).x;
+		float cur_idx_f = (float(cur_idx) + 0.5) / octree_length;
+		//cur_depth = int((texture(octree_data, vec2(cur_idx_f, 0.1)).x * 65535 - 1) / 2);
+
+		if (cur_idx == 0)
+			cur_depth = 0;
+		else if (cur_idx < 9)
+			cur_depth = 1;
+		else if (cur_idx < 73)
+			cur_depth = 2;
+		else
+			cur_depth = 3;
+
+		//s_min = 0.0f;
+		//s_min = texture(octree_data, vec2(0.0, cur_idx_f)).x;
+		//s_max = texture(octree_data, vec2(0.0f, cur_idx_f)).x;
+		s_min = texture(octree_smin_data, cur_idx_f).x;
+		s_max = texture(octree_smax_data, cur_idx_f).x;
+		//s_max = 1.0;
 
 		// if no match with transfer function, move on
 		if (s_max < window_level - window_width / 2 || window_level + window_width / 2 < s_min)
 			continue;
 
-		// if leaf node, sample through
-		//if (cur_depth == octree_max_depth)
-		if (cur_depth == 0) {
+		if (cur_depth == octree_max_depth) {
+			// if leaf node, sample through
 			t_front = max(cur_t0.x, max(cur_t0.y, cur_t0.z));
 			t_back = min(cur_t1.x, min(cur_t1.y, cur_t1.z));
 			sample_through(t_front, t_back);
+		}
+		else {
+			// if not leaf node, push child nodes that ray crosses to stack, in reverse order
+			vec3 cur_tm;
+			cur_tm.x = isinf(cur_t0.x) ? -1.0 / 0.0 : (cur_t0.x + cur_t1.x) / 2;
+			cur_tm.y = isinf(cur_t0.y) ? -1.0 / 0.0 : (cur_t0.y + cur_t1.y) / 2;
+			cur_tm.z = isinf(cur_t0.z) ? -1.0 / 0.0 : (cur_t0.z + cur_t1.z) / 2;
+
+			// check if ray crosses for all 8 child nodes
+			float child_t_front_list[8];
+			vec3 child_t0_list[8], child_t1_list[8];
+			int child_idx_list[8];
+			int child_cross_num = 0;
+
+			child_t0_list[0] = vec3(cur_t0.x, cur_t0.y, cur_t0.z);
+			child_t0_list[1] = vec3(cur_tm.x, cur_t0.y, cur_t0.z);
+			child_t0_list[2] = vec3(cur_t0.x, cur_tm.y, cur_t0.z);
+			child_t0_list[3] = vec3(cur_tm.x, cur_tm.y, cur_t0.z);
+			child_t0_list[4] = vec3(cur_t0.x, cur_t0.y, cur_tm.z);
+			child_t0_list[5] = vec3(cur_tm.x, cur_t0.y, cur_tm.z);
+			child_t0_list[6] = vec3(cur_t0.x, cur_tm.y, cur_tm.z);
+			child_t0_list[7] = vec3(cur_tm.x, cur_tm.y, cur_tm.z);
+
+			if (isinf(cur_tm.x))
+				cur_tm.x = 1.0 / 0.0;
+			if (isinf(cur_tm.y))
+				cur_tm.y = 1.0 / 0.0;
+			if (isinf(cur_tm.z))
+				cur_tm.z = 1.0 / 0.0;
+
+			child_t1_list[0] = vec3(cur_tm.x, cur_tm.y, cur_tm.z);
+			child_t1_list[1] = vec3(cur_t1.x, cur_tm.y, cur_tm.z);
+			child_t1_list[2] = vec3(cur_tm.x, cur_t1.y, cur_tm.z);
+			child_t1_list[3] = vec3(cur_t1.x, cur_t1.y, cur_tm.z);
+			child_t1_list[4] = vec3(cur_tm.x, cur_tm.y, cur_t1.z);
+			child_t1_list[5] = vec3(cur_t1.x, cur_tm.y, cur_t1.z);
+			child_t1_list[6] = vec3(cur_tm.x, cur_t1.y, cur_t1.z);
+			child_t1_list[7] = vec3(cur_t1.x, cur_t1.y, cur_t1.z);
+
+			for (int i = 0; i < 8; i++) {
+				t_front = max(child_t0_list[i].x, max(child_t0_list[i].y, child_t0_list[i].z));
+				t_back = min(child_t1_list[i].x, min(child_t1_list[i].y, child_t1_list[i].z));
+				if (t_front <= t_back) {
+					child_t_front_list[child_cross_num] = t_front;
+					child_idx_list[child_cross_num] = i;
+					child_cross_num++;
+				}
+			}
+
+			// sort
+			for (int i = 0; i < child_cross_num - 1; i++) {
+				for (int j = i+1; j < child_cross_num; j++) {
+					if (child_t_front_list[i] < child_t_front_list[j]) {
+						float temp_t = child_t_front_list[i];
+						child_t_front_list[i] = child_t_front_list[j];
+						child_t_front_list[j] = temp_t;
+						int temp_i = child_idx_list[i];
+						child_idx_list[i] = child_idx_list[j];
+						child_idx_list[j] = temp_i;
+					}
+				}
+			}
+
+			// push to stack
+			for (int i = 0; i < child_cross_num; i++) {
+				stack_top++;
+
+				int child_idx = child_idx_list[i];
+				octree_t0_stack[stack_top] = child_t0_list[child_idx];
+				octree_t1_stack[stack_top] = child_t1_list[child_idx];
+
+				if (v_normal.x < 0)
+					child_idx ^= 1;
+				if (v_normal.y < 0)
+					child_idx ^= 2;
+				if (v_normal.z < 0)
+					child_idx ^= 4;
+
+				octree_idx_stack[stack_top] = get_first_child_idx(cur_idx, cur_depth) + child_idx;
+			}
 		}
 	}
 
