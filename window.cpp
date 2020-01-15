@@ -50,7 +50,7 @@ Window::Window(MainWindow *mw)
 	*/
 
 	// add XYZ slice widgets
-	view_size = 512;
+	view_size = 600;
 	slice_widget_z = new SliceWidget(0, view_size);
 	slice_widget_x = new SliceWidget(1, view_size);
 	slice_widget_y = new SliceWidget(2, view_size);
@@ -203,9 +203,9 @@ Window::Window(MainWindow *mw)
 	window_x = create_label(slice_widget_x);
 	window_y = create_label(slice_widget_y);
 
-	coord_z->move(2 * view_size - 260, view_size - 40);
-	coord_x->move(2 * view_size - 260, view_size - 40);
-	coord_y->move(2 * view_size - 260, view_size - 40);
+	coord_z->move(view_size * 7 / 4 - 150, view_size - 40);
+	coord_x->move(view_size * 7 / 4 - 150, view_size - 40);
+	coord_y->move(view_size * 7 / 4 - 150, view_size - 40);
 
 
 
@@ -516,6 +516,8 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	int slice_pixel_num = 512;
 	int dvr_pixel_num = 512;
 	float unit_ray_len = 1;
+	skipping_mode = true;
+	QString skip_text = "empty-space skipping: ON";
 
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);
 
@@ -532,16 +534,20 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		dvr_widget->setMouseTracking(true);
 
 		window_dvr = create_label(dvr_widget);
-		coord_dvr = create_label(dvr_widget);
-		coord_dvr->move(2 * view_size - 260, view_size - 40);
+		//coord_dvr = create_label(dvr_widget);
+		//coord_dvr->move(2 * view_size - 260, view_size - 40);
+		skipping_label = create_label(dvr_widget);
+		skipping_label->move(10, 10);
+		skipping_label->setText(skip_text);
 
-		connect(dvr_widget, SIGNAL(coord_info_sig(QString)), coord_dvr, SLOT(setText(QString)));
+		//connect(dvr_widget, SIGNAL(coord_info_sig(QString)), coord_dvr, SLOT(setText(QString)));
 		connect(dvr_widget, SIGNAL(windowing_info_sig(QString)), window_dvr, SLOT(setText(QString)));
 		connect(init_DVR_all, &QAction::triggered, dvr_widget, &DVRWidget::init_all);
 		connect(init_DVR_geometry, &QAction::triggered, dvr_widget, &DVRWidget::init_geometry);
 		connect(init_DVR_windowing, &QAction::triggered, dvr_widget, &DVRWidget::init_windowing);
 		connect(toggle_DVR_mode, &QAction::triggered, dvr_widget, &DVRWidget::toggle_mode);
 		connect(toggle_DVR_skipping, &QAction::triggered, dvr_widget, &DVRWidget::toggle_skipping);
+		connect(toggle_DVR_skipping, &QAction::triggered, this, &Window::toggle_skipping_label);
 		connect(toggle_DVR_border_line, &QAction::triggered, dvr_widget, &DVRWidget::toggle_border_line);
 		connect(toggle_DVR_axial_plane, &QAction::triggered, dvr_widget, &DVRWidget::toggle_axial_slice);
 		connect(toggle_DVR_sagittal_plane, &QAction::triggered, dvr_widget, &DVRWidget::toggle_sagittal_slice);
@@ -553,15 +559,18 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		dvr_widget->set_data(data_cube, unit_ray_len, a, b);
 		window_dvr->setParent(dvr_widget);
 		window_dvr->move(10, view_size - 40);
-		coord_dvr->setParent(dvr_widget);
-		coord_dvr->move(2 * view_size - 260, view_size - 40);
+		skipping_label->setParent(dvr_widget);
+		skipping_label->move(10, 10);
+		skipping_label->setText(skip_text);
+		//coord_dvr->setParent(dvr_widget);
+		//coord_dvr->move(2 * view_size - 260, view_size - 40);
 	}
 }
 
 QLabel *Window::create_label(QWidget *sw)
 {
 	QLabel *label = new QLabel;
-	label->setFixedSize(150, 30);
+	label->setFixedSize(180, 30);
 	label->setParent(sw);
 	label->move(10, view_size - 40);
 
@@ -661,6 +670,14 @@ void Window::update_dvr_slices()
 {
 	if (dvr_widget)
 		dvr_widget->get_slice_info();
+}
+
+void Window::toggle_skipping_label()
+{
+	QString skip_text;
+	skip_text = skipping_mode ? "empty-space skipping: OFF" : "empty-space skipping: ON";
+	skipping_label->setText(skip_text);
+	skipping_mode = skipping_mode ? false : true;
 }
 
 

@@ -40,8 +40,6 @@ void DataCube::set_data(int *data, int x, int y, int z, int p, int a, int b, flo
 	m_trans_center_inverse.setToIdentity();
 	m_trans_center_inverse.translate(QVector3D(N_x / 2, N_y / 2, N_z * slice_thickness / 2));
 
-	//slice = (int*)malloc(slice_pixel_num * slice_pixel_num * sizeof(int) * 7 / 4);
-
 	init_MPR();
 }
 
@@ -105,7 +103,6 @@ void DataCube::toggle_border_line(int slice_type)
 
 void DataCube::get_slice(int slice_type, int *slice_data)
 {
-	//int* slice = (int*)malloc(slice_pixel_num * slice_pixel_num * sizeof(int) * 7 / 4);
 	float pl;
 	QVector3D start, temp, w, h;
 

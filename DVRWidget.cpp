@@ -94,7 +94,7 @@ DVRWidget::DVRWidget(DataCube *d, float r, int a, int b, int p, int s)
 
 	tex_slice_depth = new short[3 * dvr_pixel_num * dvr_pixel_num * 7 / 4];
 
-	octree_depth = 3; // min = 0
+	octree_depth = 4; // min = 0
 	octree_length = (int)((pow(8, octree_depth + 1) - 1) / 7); // size: (1 + 8 + 8^2 + ... + 8^n)
 
 	set_data(d, r, a, b);
@@ -105,10 +105,73 @@ DVRWidget::~DVRWidget()
 	cleanup();
 }
 
+tuple<short, short> DVRWidget::set_smin_smax(int depth, int idx, float x0, float x1, float y0, float y1, float z0, float z1)
+{
+	short smin, smax;
+	smin = 32767;
+	smax = 0;
+
+	if (depth == octree_depth) { // leaf node
+		int x_start, x_end, y_start, y_end, z_start, z_end;
+		x_start = floor(x0);
+		y_start = floor(y0);
+		z_start = floor(z0);
+		x_end = min(N_x-1, (int)ceil(x1));
+		y_end = min(N_y-1, (int)ceil(y1));
+		z_end = min(N_z-1, (int)ceil(z1));
+
+		for (int k = z_start; k <= z_end; k++) {
+			for (int j = y_start; j <= y_end; j++) {
+				for (int i = x_start; i <= x_end; i++) {
+					smin = min(smin, tex_3d_data[N_x * N_y * k + N_x * j + i]);
+					smax = max(smax, tex_3d_data[N_x * N_y * k + N_x * j + i]);
+				}
+			}
+		}
+	}
+	else { // not leaf node
+		int first_child_idx = 8 * idx + 1;
+		float xm, ym, zm;
+		short temp_min, temp_max;
+		xm = (x0 + x1) / 2;
+		ym = (y0 + y1) / 2;
+		zm = (z0 + z1) / 2;
+
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx, x0, xm, y0, ym, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+1, xm, x1, y0, ym, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+2, x0, xm, ym, y1, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+3, xm, x1, ym, y1, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+4, x0, xm, y0, ym, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+5, xm, x1, y0, ym, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+6, x0, xm, ym, y1, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+7, xm, x1, ym, y1, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+	}
+
+	tex_octree_smin[idx] = smin;
+	tex_octree_smax[idx] = smax;
+	return {smin, smax};
+}
+
 void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 {
 	mode = false;
-	skipping = false;
+	skipping = true;
 	border_line_visible = false;
 	axial_slice_visible = false;
 	sagittal_slice_visible = false;
@@ -167,20 +230,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 	// build tex data of octree
 	tex_octree_smin = new short[octree_length];
 	tex_octree_smax = new short[octree_length];
-	/*int leaf_count = (int)pow(8, octree_depth + 1);
-	for (int leaf = 0; leaf < )
-		for (int k = 0; k < N_z; k++) {
-			for (int j = 0; j < N_y; j++) {
-				for (int i = 0; i < N_x; i++) {
-
-				}
-			}
-		}*/
-	for (int i = 0; i < octree_length; i++) {
-		tex_octree_smin[i] = 0;
-		tex_octree_smax[i] = 32767;
-	}
-	tex_octree_smax[1] = 0;
+	set_smin_smax(0, 0, 0, N_x, 0, N_y, 0, N_z);
 
 	m_trans_center.setToIdentity();
 	m_trans_center.translate(QVector3D(-N_x / 2, -N_y / 2, -N_z * slice_thickness / 2));
@@ -632,12 +682,12 @@ void DVRWidget::paintGL()
 	m_program->setUniformValue(m_program->uniformLocation("octree_max_depth"), octree_depth);
 	m_texture->bind(2);
 	//m_texture_border->bind(3);
-	m_texture_octree_smin->bind(3);
-	m_texture_octree_smax->bind(4);
+	//m_texture_octree_smin->bind(3);
+	m_texture_octree_smax->bind(3);
 	m_program->setUniformValue("volume_data", 2);
 	//m_program->setUniformValue("border_data", 3);
-	m_program->setUniformValue("octree_smin_data", 3);
-	m_program->setUniformValue("octree_smax_data", 4);
+	//m_program->setUniformValue("octree_smin_data", 3);
+	m_program->setUniformValue("octree_smax_data", 3);
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -647,7 +697,7 @@ void DVRWidget::paintGL()
 
 	m_texture->release();
 	m_texture_border->release();
-	m_texture_octree_smin->release();
+	//m_texture_octree_smin->release();
 	m_texture_octree_smax->release();
 	m_program->release();
 	glBindTexture(GL_TEXTURE_2D, 0);

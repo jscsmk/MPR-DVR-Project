@@ -56,6 +56,7 @@ protected:
 	void mouseMoveEvent(QMouseEvent *event) override;
 	void wheelEvent(QWheelEvent *event) override;
 	QVector3D get_arcball_pos(int m_x, int m_y);
+	tuple<short, short> DVRWidget::set_smin_smax(int idx, int depth, float x0, float x1, float y0, float y1, float z0, float z1);
 
 private:
 	//QOpenGLContext *m_context;

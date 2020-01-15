@@ -3,7 +3,7 @@
 uniform sampler2D slice_data;
 uniform sampler3D volume_data;
 //uniform sampler3D border_data;
-uniform sampler1D octree_smin_data;
+//uniform sampler1D octree_smin_data;
 uniform sampler1D octree_smax_data;
 uniform int N_x;
 uniform int N_y;
@@ -32,6 +32,7 @@ vec3 accumulated_intensity, ray_start;
 vec3 slice_color_list[3];
 float slice_depth_list[3];
 bool slice_visible_list[3];
+float a, b, c;
 
 
 bool is_penetrated(float x, float y, float z)
@@ -46,61 +47,37 @@ bool is_penetrated(float x, float y, float z)
 
 void get_t_front_back(in float x_min, in float x_max, in float y_min, in float y_max, in float z_min, in float z_max, out float t0_x, out float t0_y, out float t0_z, out float t1_x, out float t1_y, out float t1_z)
 {
-	float a, b, c, temp;
-	t0_x = -1.0 / 0.0;
-	t0_y = -1.0 / 0.0;
-	t0_z = -1.0 / 0.0;
-	t1_x = 1.0 / 0.0;
-	t1_y = 1.0 / 0.0;
-	t1_z = 1.0 / 0.0;
-	a = v_normal.x;
-	b = v_normal.y;
-	c = v_normal.z;
+	t0_x = (x_min - ray_start.x) / a;
+	t1_x = (x_max - ray_start.x) / a;
+	t0_y = (y_min - ray_start.y) / b;
+	t1_y = (y_max - ray_start.y) / b;
+	t0_z = (z_min - ray_start.z) / c;
+	t1_z = (z_max - ray_start.z) / c;
 
-	if (a < 0) {
-		temp = x_min;
-		x_min = x_max;
-		x_max = temp;
+	if (a == 0) {
+		t0_x = -1.0 / 0.0;
+		t1_x = 1.0 / 0.0;
+		if (ray_start.x < x_min)
+			t0_x = 1.0 / 0.0;
+		if (x_max < ray_start.x)
+			t0_x = -1.0 / 0.0;
 	}
-	if (b < 0) {
-		temp = y_min;
-		y_min = y_max;
-		y_max = temp;
+	if (b == 0) {
+		t0_y = -1.0 / 0.0;
+		t1_y = 1.0 / 0.0;
+		if (ray_start.y < y_min)
+			t0_y = 1.0 / 0.0;
+		if (y_max < ray_start.x)
+			t0_y = -1.0 / 0.0;
 	}
-	if (c < 0) {
-		temp = z_min;
-		z_min = z_max;
-		z_max = temp;
+	if (c == 0)	{
+		t0_z = -1.0 / 0.0;
+		t1_z = 1.0 / 0.0;
+		if (ray_start.z < z_min)
+			t0_z = 1.0 / 0.0;
+		if (z_max < ray_start.x)
+			t0_z = -1.0 / 0.0;
 	}
-
-	if (a != 0) {
-		t0_x = (x_min - ray_start.x) / a;
-		t1_x = (x_max - ray_start.x) / a;
-	}
-	if (b != 0) {
-		t0_y = (y_min - ray_start.y) / b;
-		t1_y = (y_max - ray_start.y) / b;
-	}
-	if (c != 0) {
-		t0_z = (z_min - ray_start.z) / c;
-		t1_z = (z_max - ray_start.z) / c;
-	}
-}
-
-
-int get_first_child_idx(int idx, int depth)
-{
-	int i = 0, j = 1;
-	int sib_idx = idx;
-	int first_child_idx = idx;
-	while (i < depth) {
-		sib_idx -= j;
-		j *= 8;
-		i++;
-	}
-
-	first_child_idx += int(pow(8, depth)) + 7 * sib_idx;
-	return first_child_idx;
 }
 
 
@@ -110,12 +87,7 @@ void sample_through(in float t0, in float t1)
 	float cur_t = t0;
 	float cur_intensity, cur_opacity, dx, dy, dz, cur_shadowed;
 
-	while (true) {
-
-		// stop when reached end
-		if (cur_t > t1)
-			break;
-
+	while (cur_t < t1) { // stop when reached end
 		// sample from data & calculate shadow
 		cur_intensity = texture(volume_data, vec3(cur.x / N_x, cur.y / N_y, cur.z / (N_z * slice_thickness))).x;
 		cur_opacity = clamp((cur_intensity - window_level + window_width / 2) / window_width, 0.0f, 1.0f);
@@ -148,6 +120,8 @@ void sample_through(in float t0, in float t1)
 		else // MIP mode
 		{
 			max_intensity = max(max_intensity, cur_opacity);
+
+			// early ray termination
 			if (max_intensity >= 1.0f)
 				break;
 		}
@@ -168,6 +142,10 @@ void main()
 	accumulated_opacity = 1.0f;
 	accumulated_intensity = vec3(0.0f, 0.0f, 0.0f);
 	slice_opacity = 0.5f;
+	a = v_normal.x;
+	b = v_normal.y;
+	c = v_normal.z;
+	int get_next_sibling[24] = int[](1,2,4, 8,3,5, 3,8,6, 8,8,7, 5,6,8, 8,7,8, 7,8,8, 8,8,8);
 
 	// add slice information to list, sort by depth
 	vec3 slice_depth = texture(slice_data, vec2(vert_out.x / 895, vert_out.y / 511)).xyz * 32768;
@@ -180,7 +158,6 @@ void main()
 	slice_color_list[0] = vec3(1.0f, 0.0f, 0.0f);
 	slice_color_list[1] = vec3(0.0f, 1.0f, 0.0f);
 	slice_color_list[2] = vec3(0.0f, 0.0f, 1.0f);
-
 	for (int i = 0; i < 2; i++) {
 		for (int j = i+1; j < 3; j++) {
 			if (slice_depth_list[i] > slice_depth_list[j]) {
@@ -198,152 +175,180 @@ void main()
 	}
 
 	// build octree stack
-	int octree_idx_stack[4 * 3];
-	vec3 octree_t0_stack[4 * 3];
-	vec3 octree_t1_stack[4 * 3];
-	int stack_top;
+	int octree_idx_stack[6];
+	int octree_child_num_stack[6];
+	bool octree_visited_stack[6];
+	vec3 octree_t0_stack[6];
+	vec3 octree_t1_stack[6];
+	vec3 octree_min_xyz_stack[6];
+	vec3 octree_max_xyz_stack[6];
+	int stack_top = -1;
+	int child_num_shifter = 0;
 	float t_front, t_back, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z;
+	float x_min, x_max, y_min, y_max, z_min, z_max;
+	x_min = 0;
+	y_min = 0;
+	z_min = 0;
+	x_max = N_x - 1;
+	y_max = N_y - 1;
+	z_max = N_z * slice_thickness - 1;
+	if (a < 0) {
+		x_min = N_x - 1;
+		x_max = 0;
+		child_num_shifter += 1;
+	}
+	if (b < 0) {
+		y_min = N_y - 1;
+		y_max = 0;
+		child_num_shifter += 2;
+	}
+	if (c < 0) {
+		z_min = N_z * slice_thickness - 1;
+		z_max = 0;
+		child_num_shifter += 4;
+	}
 
-	get_t_front_back(1, N_x-1, 0, N_y-1, 0, slice_thickness * N_z - 1, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z);
+	// examine first node
+	get_t_front_back(x_min, x_max, y_min, y_max, z_min, z_max, t0_x, t0_y, t0_z, t1_x, t1_y, t1_z);
 	t_front = max(t0_x, max(t0_y, t0_z));
 	t_back = min(t1_x, min(t1_y, t1_z));
-
-	if (t_front <= t_back) {
-		octree_idx_stack[0] = 0;
-		octree_t0_stack[0] = vec3(t0_x, t0_y, t0_z);
-		octree_t1_stack[0] = vec3(t1_x, t1_y, t1_z);
-		stack_top = 0;
+	if (t_front <= t_back) { // ray intersects with data
+		if (skipping) {
+			octree_idx_stack[0] = 0;
+			octree_child_num_stack[0] = 0;
+			octree_t0_stack[0] = vec3(t0_x, t0_y, t0_z);
+			octree_t1_stack[0] = vec3(t1_x, t1_y, t1_z);
+			octree_min_xyz_stack[0] = vec3(x_min, y_min, z_min);
+			octree_max_xyz_stack[0] = vec3(x_max, y_max, z_max);
+			octree_visited_stack[0] = false;
+			stack_top = 0;
+		}
+		else // no empty-space skipping
+			sample_through(t_front, t_back);
 	}
-	else // no intersection with 3d data
-		stack_top = -1;
 
-	//if (t_front < t_back)
-	//	sample_through(t_front, t_back);
-
-	// start sampling
+	// start push & pop stack
 	while (stack_top >= 0) {
-		int cur_idx, cur_depth;
-		vec3 cur_t0, cur_t1;
-		float s_min, s_max;
-
-		// pop from stack
-		cur_idx = octree_idx_stack[stack_top];
+		// get top information from stack
+		int cur_first_sibling_idx, cur_child_num, cur_depth, actual_child_num;
+		vec3 cur_t0, cur_t1, cur_min_xyz, cur_max_xyz, cur_mid_xyz;
+		float s_max;
+		bool visited = octree_visited_stack[stack_top];
+		cur_first_sibling_idx = octree_idx_stack[stack_top];
+		cur_child_num = octree_child_num_stack[stack_top];
 		cur_t0 = octree_t0_stack[stack_top];
 		cur_t1 = octree_t1_stack[stack_top];
-		stack_top--;
+		cur_depth = stack_top;
+		actual_child_num = cur_child_num ^ child_num_shifter;
+		if (cur_depth == 0)
+			actual_child_num = 0;
 
 		// lookup from octree texture
-		float cur_idx_f = (float(cur_idx) + 0.5) / octree_length;
-		//cur_depth = int((texture(octree_data, vec2(cur_idx_f, 0.1)).x * 65535 - 1) / 2);
+		s_max = texture(octree_smax_data, ((cur_first_sibling_idx + actual_child_num + 0.5) / octree_length)).x;
 
-		if (cur_idx == 0)
-			cur_depth = 0;
-		else if (cur_idx < 9)
-			cur_depth = 1;
-		else if (cur_idx < 73)
-			cur_depth = 2;
-		else
-			cur_depth = 3;
+		// decide to move to child or sibling
+		if (s_max > window_level - window_width / 2 && cur_depth < octree_max_depth && !visited) {
+			octree_visited_stack[stack_top] = true;
 
-		//s_min = 0.0f;
-		//s_min = texture(octree_data, vec2(0.0, cur_idx_f)).x;
-		//s_max = texture(octree_data, vec2(0.0f, cur_idx_f)).x;
-		s_min = texture(octree_smin_data, cur_idx_f).x;
-		s_max = texture(octree_smax_data, cur_idx_f).x;
-		//s_max = 1.0;
+			// if not skip and not leaf node, push child node to stack, which ray crosses
+			float tm_x, tm_y, tm_z;
+			tm_x = (cur_t0.x + cur_t1.x) / 2;
+			tm_y = (cur_t0.y + cur_t1.y) / 2;
+			tm_z = (cur_t0.z + cur_t1.z) / 2;
 
-		// if no match with transfer function, move on
-		if (s_max < window_level - window_width / 2 || window_level + window_width / 2 < s_min)
-			continue;
+			int next_child_num = 0;
+			if (cur_t0.x > cur_t0.y && cur_t0.x > cur_t0.z) { // enters YZ plane
+				if (cur_t0.x > tm_y)
+					next_child_num |= 2;
 
-		if (cur_depth == octree_max_depth) {
-			// if leaf node, sample through
-			t_front = max(cur_t0.x, max(cur_t0.y, cur_t0.z));
-			t_back = min(cur_t1.x, min(cur_t1.y, cur_t1.z));
-			sample_through(t_front, t_back);
+				if (cur_t0.x > tm_z)
+					next_child_num |= 4;
+			}
+			else if (cur_t0.y > cur_t0.z) { // enters XZ plane
+				if (cur_t0.y > tm_x)
+					next_child_num |= 1;
+
+				if (cur_t0.y > tm_z)
+					next_child_num |= 4;
+			}
+			else { // enters XY plane
+				if (cur_t0.z > tm_x)
+					next_child_num |= 1;
+
+				if (cur_t0.z > tm_y)
+					next_child_num |= 2;
+			}
+
+			stack_top++;
+			octree_child_num_stack[stack_top] = next_child_num;
+			octree_idx_stack[stack_top] = 8 * (cur_first_sibling_idx + actual_child_num) + 1;
+			octree_visited_stack[stack_top] = false;
+
+			float t0t1_x[3] = float[](cur_t0.x, tm_x, cur_t1.x);
+			float t0t1_y[3] = float[](cur_t0.y, tm_y, cur_t1.y);
+			float t0t1_z[3] = float[](cur_t0.z, tm_z, cur_t1.z);
+			octree_t0_stack[stack_top] = vec3(
+				t0t1_x[next_child_num & 1],
+				t0t1_y[(next_child_num & 2) / 2],
+				t0t1_z[(next_child_num & 4) / 4]
+			);
+			octree_t1_stack[stack_top] = vec3(
+				t0t1_x[(next_child_num & 1) + 1],
+				t0t1_y[((next_child_num & 2) / 2) + 1],
+				t0t1_z[((next_child_num & 4) / 4) + 1]
+			);
 		}
 		else {
-			// if not leaf node, push child nodes that ray crosses to stack, in reverse order
-			vec3 cur_tm;
-			cur_tm.x = isinf(cur_t0.x) ? -1.0 / 0.0 : (cur_t0.x + cur_t1.x) / 2;
-			cur_tm.y = isinf(cur_t0.y) ? -1.0 / 0.0 : (cur_t0.y + cur_t1.y) / 2;
-			cur_tm.z = isinf(cur_t0.z) ? -1.0 / 0.0 : (cur_t0.z + cur_t1.z) / 2;
+			if (cur_depth == octree_max_depth && s_max > window_level - window_width / 2) {
+				// if leaf node and not skip, sample through
+				t_front = max(cur_t0.x, max(cur_t0.y, cur_t0.z));
+				t_back = min(cur_t1.x, min(cur_t1.y, cur_t1.z));
+				sample_through(t_front, t_back);
 
-			// check if ray crosses for all 8 child nodes
-			float child_t_front_list[8];
-			vec3 child_t0_list[8], child_t1_list[8];
-			int child_idx_list[8];
-			int child_cross_num = 0;
-
-			child_t0_list[0] = vec3(cur_t0.x, cur_t0.y, cur_t0.z);
-			child_t0_list[1] = vec3(cur_tm.x, cur_t0.y, cur_t0.z);
-			child_t0_list[2] = vec3(cur_t0.x, cur_tm.y, cur_t0.z);
-			child_t0_list[3] = vec3(cur_tm.x, cur_tm.y, cur_t0.z);
-			child_t0_list[4] = vec3(cur_t0.x, cur_t0.y, cur_tm.z);
-			child_t0_list[5] = vec3(cur_tm.x, cur_t0.y, cur_tm.z);
-			child_t0_list[6] = vec3(cur_t0.x, cur_tm.y, cur_tm.z);
-			child_t0_list[7] = vec3(cur_tm.x, cur_tm.y, cur_tm.z);
-
-			if (isinf(cur_tm.x))
-				cur_tm.x = 1.0 / 0.0;
-			if (isinf(cur_tm.y))
-				cur_tm.y = 1.0 / 0.0;
-			if (isinf(cur_tm.z))
-				cur_tm.z = 1.0 / 0.0;
-
-			child_t1_list[0] = vec3(cur_tm.x, cur_tm.y, cur_tm.z);
-			child_t1_list[1] = vec3(cur_t1.x, cur_tm.y, cur_tm.z);
-			child_t1_list[2] = vec3(cur_tm.x, cur_t1.y, cur_tm.z);
-			child_t1_list[3] = vec3(cur_t1.x, cur_t1.y, cur_tm.z);
-			child_t1_list[4] = vec3(cur_tm.x, cur_tm.y, cur_t1.z);
-			child_t1_list[5] = vec3(cur_t1.x, cur_tm.y, cur_t1.z);
-			child_t1_list[6] = vec3(cur_tm.x, cur_t1.y, cur_t1.z);
-			child_t1_list[7] = vec3(cur_t1.x, cur_t1.y, cur_t1.z);
-
-			for (int i = 0; i < 8; i++) {
-				t_front = max(child_t0_list[i].x, max(child_t0_list[i].y, child_t0_list[i].z));
-				t_back = min(child_t1_list[i].x, min(child_t1_list[i].y, child_t1_list[i].z));
-				if (t_front <= t_back) {
-					child_t_front_list[child_cross_num] = t_front;
-					child_idx_list[child_cross_num] = i;
-					child_cross_num++;
-				}
+				// early ray termination
+				if (accumulated_opacity < 0.001f || max_intensity >= 1.0f)
+					break;
 			}
 
-			// sort
-			for (int i = 0; i < child_cross_num - 1; i++) {
-				for (int j = i+1; j < child_cross_num; j++) {
-					if (child_t_front_list[i] < child_t_front_list[j]) {
-						float temp_t = child_t_front_list[i];
-						child_t_front_list[i] = child_t_front_list[j];
-						child_t_front_list[j] = temp_t;
-						int temp_i = child_idx_list[i];
-						child_idx_list[i] = child_idx_list[j];
-						child_idx_list[j] = temp_i;
-					}
-				}
+			// find next sibling node, push to stack
+			if (cur_depth == 0)
+				break;
+
+			int exit_plane, next_sibling;
+			if (cur_t1.x < cur_t1.y && cur_t1.x < cur_t1.z)
+				exit_plane = 0;
+			else if (cur_t1.y < cur_t1.z)
+				exit_plane = 1;
+			else
+				exit_plane = 2;
+
+			next_sibling = get_next_sibling[3 * cur_child_num + exit_plane];
+			if (next_sibling == 8) {
+				stack_top--;
 			}
+			else {
+				octree_child_num_stack[stack_top] = next_sibling;
+				octree_visited_stack[stack_top] = false;
 
-			// push to stack
-			for (int i = 0; i < child_cross_num; i++) {
-				stack_top++;
-
-				int child_idx = child_idx_list[i];
-				octree_t0_stack[stack_top] = child_t0_list[child_idx];
-				octree_t1_stack[stack_top] = child_t1_list[child_idx];
-
-				if (v_normal.x < 0)
-					child_idx ^= 1;
-				if (v_normal.y < 0)
-					child_idx ^= 2;
-				if (v_normal.z < 0)
-					child_idx ^= 4;
-
-				octree_idx_stack[stack_top] = get_first_child_idx(cur_idx, cur_depth) + child_idx;
+				float choice_t0_x[2] = float[](cur_t1.x, cur_t0.x);
+				float choice_t0_y[2] = float[](cur_t0.y, cur_t1.y);
+				float choice_t0_z[2] = float[](cur_t0.z, cur_t1.z);
+				float choice_t1_x[2] = float[](2 * cur_t1.x - cur_t0.x, cur_t1.x);
+				float choice_t1_y[2] = float[](cur_t1.y, 2 * cur_t1.y - cur_t0.y);
+				float choice_t1_z[2] = float[](cur_t1.z, 2 * cur_t1.z - cur_t0.z);
+				octree_t0_stack[stack_top] = vec3(
+					choice_t0_x[(exit_plane + 1) / 2],
+					choice_t0_y[exit_plane & 1],
+					choice_t0_z[exit_plane / 2]
+				);
+				octree_t1_stack[stack_top] = vec3(
+					choice_t1_x[(exit_plane + 1) / 2],
+					choice_t1_y[exit_plane & 1],
+					choice_t1_z[exit_plane / 2]
+				);
 			}
 		}
 	}
-
 
 	// blend slice plane if not passed through yet
 	for (int i = 0; i < 3; i++) {

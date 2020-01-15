@@ -11,7 +11,7 @@ glwidget.cpp
 glwidget.h
 logo.cpp
 logo.h
-
+.vscode/
 
 
 ## Ignore Visual Studio temporary files, build results, and

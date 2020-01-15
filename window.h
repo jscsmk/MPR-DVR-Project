@@ -50,6 +50,7 @@ private slots:
 	void x_line_moved(int which);
 	void y_line_moved(int which);
 	void update_dvr_slices();
+	void toggle_skipping_label();
 
 private:
 	MainWindow *main_window;
@@ -59,7 +60,7 @@ private:
 	DVRWidget *dvr_widget;
 	DataCube *data_cube;
 	QLabel *create_label(QWidget *sw);
-	QLabel *selected, *coord_z, *coord_x, *coord_y, *window_z, *window_x, *window_y, *window_dvr, *coord_dvr;
+	QLabel *selected, *coord_z, *coord_x, *coord_y, *window_z, *window_x, *window_y, *window_dvr, *coord_dvr, *skipping_label;
 	QPushButton *initBtn, *hideBtn, *toggleLineBtn, *toggleBorderBtn;
 	MainWindow *mainWindow;
 	QTreeView *tree;
@@ -78,6 +79,7 @@ private:
 	QAction *init_DVR_all, *init_DVR_geometry, *init_DVR_windowing;
 	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
 	int *data_3d;
+	bool skipping_mode;
 };
 
 #endif
