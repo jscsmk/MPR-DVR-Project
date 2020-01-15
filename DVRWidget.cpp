@@ -338,6 +338,10 @@ void DVRWidget::_init_geometry()
 	ws = QVector3D(-1, 0, 0);
 	hs = QVector3D(0, 0, -1);
 	ns = QVector3D(0, 1, 0);
+
+	arcball_last_pos = get_arcball_pos(10, 10);
+	QVector3D arcball_pos = get_arcball_pos(20, 20);
+	do_rotate(arcball_pos);
 }
 
 void DVRWidget::_init_windowing()
@@ -721,26 +725,29 @@ void DVRWidget::mousePressEvent(QMouseEvent *event)
 	arcball_last_pos = get_arcball_pos(event->x(), event->y());
 }
 
+void DVRWidget::do_rotate(QVector3D arcball_pos) {
+	QVector3D arcball_d = arcball_pos - arcball_last_pos;
+	float d = arcball_d.length();
+	float arcball_radius = 500.0 * screen_size / L_s;
+	float a = acos(1 - d * d / (2 * arcball_radius * arcball_radius));
+	QVector3D cross = QVector3D::crossProduct(arcball_last_pos, arcball_pos);
+	QVector3D rotate_axis = cross.x() * ws - cross.y() * hs - cross.z() * ns;
+
+	QMatrix4x4 m_rotate;
+	m_rotate.setToIdentity();
+	m_rotate.rotate(a * 2 * 180 / PI, rotate_axis);
+
+	P_screen = (m_trans_center_inverse * m_rotate * m_trans_center * QVector4D(P_screen, 1)).toVector3D();
+	ws = (m_rotate * QVector4D(ws, 1)).toVector3D();
+	hs = (m_rotate * QVector4D(hs, 1)).toVector3D();
+	ns = (m_rotate * QVector4D(ns, 1)).toVector3D();
+}
+
 void DVRWidget::mouseMoveEvent(QMouseEvent *event) // mouse click event
 {
 	if (event->buttons() & Qt::LeftButton) { // when left clicked = rotation
 		QVector3D arcball_pos = get_arcball_pos(event->x(), event->y());
-		QVector3D arcball_d = arcball_pos - arcball_last_pos;
-		float d = arcball_d.length();
-		float arcball_radius = 500.0 * screen_size / L_s;
-		float a = acos(1 - d * d / (2 * arcball_radius * arcball_radius));
-		QVector3D cross = QVector3D::crossProduct(arcball_last_pos, arcball_pos);
-		QVector3D rotate_axis = cross.x() * ws - cross.y() * hs - cross.z() * ns;
-
-		QMatrix4x4 m_rotate;
-		m_rotate.setToIdentity();
-		m_rotate.rotate(a * 2 * 180 / PI, rotate_axis);
-
-		P_screen = (m_trans_center_inverse * m_rotate * m_trans_center * QVector4D(P_screen, 1)).toVector3D();
-		ws = (m_rotate * QVector4D(ws, 1)).toVector3D();
-		hs = (m_rotate * QVector4D(hs, 1)).toVector3D();
-		ns = (m_rotate * QVector4D(ns, 1)).toVector3D();
-
+		do_rotate(arcball_pos);
 		mouse_last_x = event->x();
 		mouse_last_y = event->y();
 		arcball_last_pos = arcball_pos;
