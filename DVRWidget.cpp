@@ -81,14 +81,21 @@ DVRWidget::DVRWidget(DataCube *d, float r, int a, int b, int p, int s)
 	tex_3d_data = NULL;
 	tex_3d_border = NULL;
 	tex_slice_depth = NULL;
+	tex_octree_smin = NULL;
+	tex_octree_smax = NULL;
 
 	m_program = new QOpenGLShaderProgram;
 	m_program_2 = new QOpenGLShaderProgram;
 	m_texture = new QOpenGLTexture(QOpenGLTexture::Target3D);
 	m_texture_border = new QOpenGLTexture(QOpenGLTexture::Target3D);
 	m_texture_slice = new QOpenGLTexture(QOpenGLTexture::Target2D);
+	m_texture_octree_smin = new QOpenGLTexture(QOpenGLTexture::Target1D);
+	m_texture_octree_smax = new QOpenGLTexture(QOpenGLTexture::Target1D);
 
 	tex_slice_depth = new short[3 * dvr_pixel_num * dvr_pixel_num * 7 / 4];
+
+	octree_depth = 4; // min = 0
+	octree_length = (int)((pow(8, octree_depth + 1) - 1) / 7); // size: (1 + 8 + 8^2 + ... + 8^n)
 
 	set_data(d, r, a, b);
 }
@@ -98,9 +105,73 @@ DVRWidget::~DVRWidget()
 	cleanup();
 }
 
+tuple<short, short> DVRWidget::set_smin_smax(int depth, int idx, float x0, float x1, float y0, float y1, float z0, float z1)
+{
+	short smin, smax;
+	smin = 32767;
+	smax = 0;
+
+	if (depth == octree_depth) { // leaf node
+		int x_start, x_end, y_start, y_end, z_start, z_end;
+		x_start = floor(x0);
+		y_start = floor(y0);
+		z_start = floor(z0);
+		x_end = min(N_x-1, (int)ceil(x1));
+		y_end = min(N_y-1, (int)ceil(y1));
+		z_end = min(N_z-1, (int)ceil(z1));
+
+		for (int k = z_start; k <= z_end; k++) {
+			for (int j = y_start; j <= y_end; j++) {
+				for (int i = x_start; i <= x_end; i++) {
+					smin = min(smin, tex_3d_data[N_x * N_y * k + N_x * j + i]);
+					smax = max(smax, tex_3d_data[N_x * N_y * k + N_x * j + i]);
+				}
+			}
+		}
+	}
+	else { // not leaf node
+		int first_child_idx = 8 * idx + 1;
+		float xm, ym, zm;
+		short temp_min, temp_max;
+		xm = (x0 + x1) / 2;
+		ym = (y0 + y1) / 2;
+		zm = (z0 + z1) / 2;
+
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx, x0, xm, y0, ym, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+1, xm, x1, y0, ym, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+2, x0, xm, ym, y1, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+3, xm, x1, ym, y1, z0, zm);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+4, x0, xm, y0, ym, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+5, xm, x1, y0, ym, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+6, x0, xm, ym, y1, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+		tie(temp_min, temp_max) = set_smin_smax(depth + 1, first_child_idx+7, xm, x1, ym, y1, zm, z1);
+		smin = min(smin, temp_min);
+		smax = max(smax, temp_max);
+	}
+
+	tex_octree_smin[idx] = smin;
+	tex_octree_smax[idx] = smax;
+	return {smin, smax};
+}
+
 void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 {
 	mode = false;
+	skipping = true;
 	border_line_visible = false;
 	axial_slice_visible = false;
 	sagittal_slice_visible = false;
@@ -119,7 +190,10 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 
 	free(tex_3d_data);
 	free(tex_3d_border);
+	free(tex_octree_smin);
+	free(tex_octree_smax);
 
+	// build tex data of 3d volume data
 	tex_3d_data = new short[N_x * N_y * N_z];
 	for (int i = 0; i < N_x * N_y * N_z; i++) {
 		int temp = raw[i];
@@ -134,6 +208,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 		tex_3d_data[i] = temp;
 	}
 
+	// build tex data of border data
 	int t = 3;
 	tex_3d_border = new short[N_x * N_y * N_z];
 	for (int k = 0; k < N_z; k++) {
@@ -151,6 +226,11 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 			}
 		}
 	}
+
+	// build tex data of octree
+	tex_octree_smin = new short[octree_length];
+	tex_octree_smax = new short[octree_length];
+	set_smin_smax(0, 0, 0, N_x, 0, N_y, 0, N_z);
 
 	m_trans_center.setToIdentity();
 	m_trans_center.translate(QVector3D(-N_x / 2, -N_y / 2, -N_z * slice_thickness / 2));
@@ -202,6 +282,11 @@ void DVRWidget::cleanup()
 void DVRWidget::toggle_mode()
 {
 	mode = mode ? false : true;
+	update();
+}
+void DVRWidget::toggle_skipping()
+{
+	skipping = skipping ? false : true;
 	update();
 }
 void DVRWidget::toggle_border_line()
@@ -407,6 +492,24 @@ void DVRWidget::set_tex_samplers()
 	m_texture_border->setWrapMode(QOpenGLTexture::ClampToBorder);
 	m_texture_border->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
 	m_texture_border->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_3d_border);
+
+	// set octree sampler
+	m_texture_octree_smin->destroy();
+	m_texture_octree_smin->create();
+	m_texture_octree_smin->setSize(octree_length);
+	m_texture_octree_smin->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+	m_texture_octree_smin->setFormat(QOpenGLTexture::R16_UNorm);
+	m_texture_octree_smin->setWrapMode(QOpenGLTexture::ClampToEdge);
+	m_texture_octree_smin->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
+	m_texture_octree_smin->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_octree_smin);
+	m_texture_octree_smax->destroy();
+	m_texture_octree_smax->create();
+	m_texture_octree_smax->setSize(octree_length);
+	m_texture_octree_smax->setMinMagFilters(QOpenGLTexture::Nearest, QOpenGLTexture::Nearest);
+	m_texture_octree_smax->setFormat(QOpenGLTexture::R16_UNorm);
+	m_texture_octree_smax->setWrapMode(QOpenGLTexture::ClampToEdge);
+	m_texture_octree_smax->allocateStorage(QOpenGLTexture::Red, QOpenGLTexture::Int16);
+	m_texture_octree_smax->setData(QOpenGLTexture::Red, QOpenGLTexture::Int16, tex_octree_smax);
 }
 
 void DVRWidget::set_slice_texture()
@@ -570,14 +673,21 @@ void DVRWidget::paintGL()
 	m_program->setUniformValue(window_level_loc, (window_level + 1000) / 4096);
 	m_program->setUniformValue(window_width_loc, window_width / 4096);
 	m_program->setUniformValue(mode_loc, mode);
+	m_program->setUniformValue(m_program->uniformLocation("skipping"), skipping);
 	m_program->setUniformValue(border_visible_loc, border_line_visible);
 	m_program->setUniformValue(axial_visible_loc, axial_slice_visible);
 	m_program->setUniformValue(sagittal_visible_loc, sagittal_slice_visible);
 	m_program->setUniformValue(coronal_visible_loc, coronal_slice_visible);
+	m_program->setUniformValue(m_program->uniformLocation("octree_length"), octree_length);
+	m_program->setUniformValue(m_program->uniformLocation("octree_max_depth"), octree_depth);
 	m_texture->bind(2);
-	m_texture_border->bind(3);
+	//m_texture_border->bind(3);
+	//m_texture_octree_smin->bind(3);
+	m_texture_octree_smax->bind(3);
 	m_program->setUniformValue("volume_data", 2);
-	m_program->setUniformValue("border_data", 3);
+	//m_program->setUniformValue("border_data", 3);
+	//m_program->setUniformValue("octree_smin_data", 3);
+	m_program->setUniformValue("octree_smax_data", 3);
 
 	glEnable(GL_DEPTH_TEST);
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -587,6 +697,8 @@ void DVRWidget::paintGL()
 
 	m_texture->release();
 	m_texture_border->release();
+	//m_texture_octree_smin->release();
+	m_texture_octree_smax->release();
 	m_program->release();
 	glBindTexture(GL_TEXTURE_2D, 0);
 
