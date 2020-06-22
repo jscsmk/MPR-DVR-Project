@@ -5,21 +5,18 @@
 #include "gdcmImageReader.h"
 #include "data_cube.h"
 #include "sliceWidget.h"
-//#include "screenWidget.h"
 
 class QSignalMapper;
 class QLabel;
 class QSlider;
 class QPushButton;
 class QTreeView;
-//class GLWidget;
 class DVRWidget;
 class MainWindow;
 class QFileSystemModel;
 class QSpacerItem;
 class QWidget;
 class SliceWidget;
-//class ScreenWidget;
 class DataCube;
 class QMenu;
 class QAction;
@@ -55,8 +52,6 @@ private slots:
 private:
 	MainWindow *main_window;
 	SliceWidget *slice_widget_z, *slice_widget_x, *slice_widget_y;
-	//ScreenWidget *screen_widget;
-	//GLWidget *glWidget;
 	DVRWidget *dvr_widget;
 	DataCube *data_cube;
 	QLabel *create_label(QWidget *sw);
@@ -78,7 +73,7 @@ private:
 	QLabel *blank_dvr;
 	QAction *init_DVR_all, *init_DVR_geometry, *init_DVR_windowing;
 	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
-	int *data_3d;
+	int *data_3d, *mask_3d;
 	bool skipping_mode;
 };
 

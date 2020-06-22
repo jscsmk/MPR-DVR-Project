@@ -46,10 +46,10 @@ protected:
 
 private:
 	DataCube *data_cube;
-	int *slice_data;
-	unsigned char* windowed_slice;
+	int *slice_data, *mask_data;
+	unsigned char *windowed_slice, *masked_slice;
 	QPixmap *blank_img, *loading_img;
-	int slice_type, is_valid, slice_size;
+	int slice_type, is_valid, slice_size, mask_count;
 	float pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max;
 	int is_line_visible;
 	int is_line_mouseover_h, is_line_mouseover_v;

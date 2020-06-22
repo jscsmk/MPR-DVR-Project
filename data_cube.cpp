@@ -20,9 +20,11 @@ DataCube::DataCube()
 	z_border_visible = 0;
 }
 
-void DataCube::set_data(int *data, int x, int y, int z, int p, int a, int b, float t, int mi, int ma)
+void DataCube::set_data(int *data, int *mask, int n_m, int x, int y, int z, int p, int a, int b, float t, int mi, int ma)
 {
 	data_3d = data;
+	mask_3d = mask;
+	N_mask = n_m;
 	N_x = x;
 	N_y = y;
 	N_z = z;
@@ -59,8 +61,6 @@ void DataCube::init_MPR()
 	ny = QVector3D(0, 1, 0);
 	nz = QVector3D(0, 0, 1);
 
-	//wx = QVector3D(0, 0, 1);
-	//hx = QVector3D(0, 1, 0);
 	wx = QVector3D(0, -1, 0);
 	hx = QVector3D(0, 0, 1);
 	wy = QVector3D(1, 0, 0);
@@ -72,7 +72,6 @@ void DataCube::init_MPR()
 	qx = P_axis + QVector3D(0, L_x * 7 / 8, -L_x / 2);
 	qy = P_axis - QVector3D(L_y * 7 / 8, 0, L_y / 2);
 
-	//r_x = 0;
 	r_x = PI / 2;
 	r_y = 0;
 	r_z = 0;
@@ -82,13 +81,17 @@ tuple<int, int, int, float> DataCube::get_data_size()
 {
 	return { N_x, N_y, N_z, slice_thickness };
 }
-tuple<int, int, int, int, int> DataCube::get_pixel_info()
+tuple<int, int, int, int, int, int> DataCube::get_pixel_info()
 {
-	return {slice_pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max };
+	return {slice_pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max, N_mask };
 }
 int* DataCube::get_raw_data()
 {
 	return data_3d;
+}
+int* DataCube::get_cur_mask()
+{
+	return mask_3d;
 }
 
 void DataCube::toggle_border_line(int slice_type)
@@ -101,7 +104,7 @@ void DataCube::toggle_border_line(int slice_type)
 		y_border_visible = (y_border_visible + 1) % 2;
 }
 
-void DataCube::get_slice(int slice_type, int *slice_data)
+void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 {
 	float pl;
 	QVector3D start, temp, w, h;
@@ -132,13 +135,17 @@ void DataCube::get_slice(int slice_type, int *slice_data)
 		temp = start;
 
 		for (int j = 0; j < slice_pixel_num * 7 / 4; j++) {
-			slice_data[slice_pixel_num*i*7/4 + j] = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
+			int interpolated_data, mask_x, mask_y, mask_z;
+			tie(interpolated_data, mask_x, mask_y, mask_z) = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
+			slice_data[slice_pixel_num*i * 7 / 4 + j] = interpolated_data;
+
+			for (int m = 0; m < N_mask; m++) {
+				mask_data[N_mask*(slice_pixel_num*i * 7 / 4 + j) + m] = mask_x > 0 ? mask_3d[N_mask*(N_x*N_y*mask_z + N_x * mask_y + mask_x) + m] : 0;
+			}
 			temp = temp + w;
 		}
 		start = start + h;
 	}
-
-	//return slice;
 }
 
 tuple<int, int, float> DataCube::get_line_info(int slice_type)
@@ -187,7 +194,7 @@ tuple<int, int, float> DataCube::get_line_info(int slice_type)
 	return {line_x, line_y, line_angle};
 }
 
-int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
+tuple<int, int, int, int> DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 {
 	z /= slice_thickness;
 
@@ -209,15 +216,15 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 
 	if (x < -2*pl || y < -2*pl || z < -2*pl || x >= N_x - 1 + 2*pl || y >= N_y - 1 + 2*pl || z >= N_z - 1 + 2*pl) {
 		// if out of range, return min val
-		return pixel_min;
+		return { pixel_min, -1, -1, -1 };
 	}
 
 	if (x < 0 || y < 0 || z < 0 || x >= N_x - 1 || y >= N_y - 1 || z >= N_z - 1) {
 		// if border, return -1
 		if (draw_border == 1)
-			return pixel_min-1;
+			return { pixel_min - 1, -1, -1, -1 };
 
-		return pixel_min;
+		return { pixel_min, -1, -1, -1 };
 	}
 
 	int fA, fB, fC, fD, fE, fF, fG, fH;
@@ -260,7 +267,12 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 	b = 1 - a;
 	fP = b*fR + a*fS;
 
-	return (int)fP;
+	// get nearest neighbor mask data
+	int x_nn = x - x_floor < x_ceil - x ? x_floor : x_ceil;
+	int y_nn = y - y_floor < y_ceil - y ? y_floor : y_ceil;
+	int z_nn = z - z_floor < z_ceil - z ? z_floor : z_ceil;
+
+	return { (int)fP, x_nn, y_nn, z_nn };
 }
 
 tuple<int, int, int> DataCube::closest_neighbor(float x, float y, float z)
@@ -271,7 +283,7 @@ tuple<int, int, int> DataCube::closest_neighbor(float x, float y, float z)
 tuple<int, int, int, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
 {
 	QVector3D point;
-	int cn_x, cn_y, cn_z, pixel_v;
+	int cn_x, cn_y, cn_z, pixel_v, mask_x, mask_y, mask_z;
 
 	if (slice_type == 0) // z slice
 		point = qz + pixel_len_z * (m_x * wz + m_y * hz);
@@ -281,7 +293,7 @@ tuple<int, int, int, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
 		point = qy + pixel_len_y * (m_x * wy + m_y * hy);
 
 	tie(cn_x, cn_y, cn_z) = closest_neighbor(point.x(), point.y(), point.z());
-	pixel_v = trilinear_interpolation(-1, cn_x, cn_y, cn_z);
+	tie(pixel_v, mask_x, mask_y, mask_z) = trilinear_interpolation(-1, cn_x, cn_y, cn_z);
 
 	return {cn_x, cn_y, cn_z / slice_thickness, pixel_v};
 }

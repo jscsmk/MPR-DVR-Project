@@ -15,12 +15,13 @@ class DataCube
 {
 public:
 	DataCube();
-	void set_data(int *data, int x, int y, int z, int p, int a, int b, float t, int mi, int ma);
+	void set_data(int *data, int *mask, int n_m, int x, int y, int z, int p, int a, int b, float t, int mi, int ma);
 	void init_MPR();
 	tuple<int, int, int, float> get_data_size();
-	tuple<int, int, int, int, int> get_pixel_info();
+	tuple<int, int, int, int, int, int> get_pixel_info();
 	int* get_raw_data();
-	void get_slice(int slice_type, int *slice_data);
+	int* get_cur_mask();
+	void get_slice(int slice_type, int *slice_data, int *mask_data);
 	tuple<int, int, int, int> get_coord(int slice_type, int m_x, int m_y);
 	tuple<int, int, float> get_line_info(int slice_type);
 	int move_slice(int from, int target, float distance);
@@ -51,15 +52,15 @@ public:
 
 
 protected:
-	int trilinear_interpolation(int slice_type, float x, float y, float z);
+	tuple<int, int, int, int> trilinear_interpolation(int slice_type, float x, float y, float z);
 	tuple<int, int, int> closest_neighbor(float x, float y, float z);
 	//int ray_casting(float x, float y, float z);
 	//QVector3D ray_penetrating_point(QVector3D r);
 
 private:
 	int *data_3d;							// 3d data points
-	//int *slice;
-	int N_x, N_y, N_z, N_max,				// size of total data
+	int *mask_3d;							// 3d mask points
+	int N_x, N_y, N_z, N_max, N_mask,		// size of total data
 		slice_pixel_num,					// number of pixels of slice
 		rescale_slope, rescale_intercept,	// dicom pixel rescale values
 		x_border_visible,

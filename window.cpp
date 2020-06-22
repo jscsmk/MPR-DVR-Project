@@ -61,6 +61,7 @@ Window::Window(MainWindow *mw)
 	slice_widget_x->setContentsMargins(0, 0, 0, 20);
 	data_cube = new DataCube();
 	data_3d = NULL;
+	mask_3d = NULL;
 	dvr_widget = NULL;
 
 	// add local file browser
@@ -482,10 +483,8 @@ void Window::load_images(int z, int x, int y, int a, int b)
 			// this only works with UINT16
 			// TODO: change this part to support other data types of DICOM
 			short *buffer16 = (short*)buffer;
-			for (int j = 0; j < y; j++)
-			{
-				for (int k = 0; k < x; k++)
-				{
+			for (int j = 0; j < y; j++)	{
+				for (int k = 0; k < x; k++)	{
 					short stored_pixel_value = *buffer16;
 					data_3d[x*y*i + x * j + k] = (int)stored_pixel_value;
 					buffer16++;
@@ -512,6 +511,20 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	}
 	//selected->setText(QString::number(p_min) + ", " + QString::number(p_max));
 
+	// TODO: load mask data
+	free(mask_3d);
+	int mask_count = 4;
+	mask_3d = (int*)malloc(mask_count * z * x * y * sizeof(int));
+	for (int i = 0; i < z; i++) {
+		for (int j = 0; j < y; j++) {
+			for (int k = 0; k < x; k++) {
+				mask_3d[mask_count*(x*y*i + x*j + k) + 0] = 100 < i && i < 150 && 150 < j && j < 250 && 200 < k && k < 230 ? 1 : 0;
+				mask_3d[mask_count*(x*y*i + x*j + k) + 1] = 100 < i && i < 150 && 350 < j && j < 400 && 260 < k && k < 300 ? 1 : 0;
+				mask_3d[mask_count*(x*y*i + x*j + k) + 2] = 100 < i && i < 150 && 250 < j && j < 350 && 100 < k && k < 150 ? 1 : 0;
+				mask_3d[mask_count*(x*y*i + x*j + k) + 3] = 100 < i && i < 150 && 450 < j && j < 500 && 100 < k && k < 150 ? 1 : 0;
+			}
+		}
+	}
 
 	int slice_pixel_num = 512;
 	int dvr_pixel_num = 512;
@@ -519,7 +532,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
 
-	data_cube->set_data(data_3d, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);
+	data_cube->set_data(data_3d, mask_3d, mask_count, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);
 
 	slice_widget_z->set_data(data_cube);
 	slice_widget_x->set_data(data_cube);

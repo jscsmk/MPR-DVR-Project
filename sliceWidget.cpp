@@ -36,7 +36,6 @@ SliceWidget::SliceWidget(int t, int s)
 	img->load(loading_path);
 	*loading_img = QPixmap::fromImage(*img);
 
-	//slice = NULL;
 	set_pixmap();
 }
 
@@ -44,9 +43,10 @@ void SliceWidget::set_data(DataCube *d)
 {
 	is_valid = 1;
 	data_cube = d;
-	tie(pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max) = data_cube->get_pixel_info();
+	tie(pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max, mask_count) = data_cube->get_pixel_info();
 	slice_data = (int*)malloc(pixel_num * pixel_num * sizeof(int) * 7 / 4);
-	windowed_slice = (unsigned char*)malloc(pixel_num * pixel_num * sizeof(unsigned char) * 7 / 4);
+	mask_data = (int*)malloc(mask_count * pixel_num * pixel_num * sizeof(int) * 7 / 4);
+	windowed_slice = (unsigned char*)malloc(3 * pixel_num * pixel_num * sizeof(unsigned char) * 7 / 4);
 	window_level = 50;
 	window_width = 350;
 	window_changed = 0;
@@ -56,13 +56,7 @@ void SliceWidget::set_data(DataCube *d)
 
 void SliceWidget::get_slice()
 {
-	// get raw slice from data cube
-	//free(slice);
-	//slice = data_cube->get_slice(slice_type); // slice with actual pixel values(not 0~255)
-	//for (int i = 0; i < pixel_num * pixel_num * 7 / 4; i++)
-	//	slice_copy[i] = slice[i];
-
-	data_cube->get_slice(slice_type, slice_data); // slice with actual pixel values(not 0~255)
+	data_cube->get_slice(slice_type, slice_data, mask_data); // slice with actual pixel values(not 0~255)
 	apply_windowing();
 }
 
@@ -84,12 +78,25 @@ void SliceWidget::set_windowing(int wl, int ww)
 
 void SliceWidget::apply_windowing()
 {
-	// rescale pixel value to HU unit, apply windowing, then convert to 0~255
-	for (int i = 0; i < pixel_num * pixel_num * 7 / 4; i++) {
+	// rescale pixel value to HU unit, apply windowing, blend with mask data, then convert to RGB(0~255)
+	float mask_color_list[27] = {
+		255, 0, 255,
+		0, 255, 255,
+		255, 255, 0,
+		255, 0, 128,
+		255, 128, 0,
+		255, 128, 0,
+		128, 0, 255,
+		128, 0, 255,
+		128, 255, 0
+	};
+	float mask_opacity = 0.5;
+
+	for (int i = 0, j = 0; i < pixel_num * pixel_num * 7 / 4; i++) {
 		float temp = (float)(slice_data[i]);
 
 		if (temp < pixel_min) {
-			windowed_slice[i] = 255;
+			temp = 255;
 		}
 		else {
 			temp = rescale_slope * temp + rescale_intercept;
@@ -102,11 +109,18 @@ void SliceWidget::apply_windowing()
 				temp = window_width;
 			}
 			temp = temp * 255 / window_width;
-			windowed_slice[i] = (unsigned char)temp;
+		}
+
+		for (int k = 0; k < 3; k++) {
+			for (int m = 0; m < mask_count; m++) {
+				if (mask_data[mask_count*i + m] > 0) {
+					temp = (temp * (1 - mask_opacity) + mask_color_list[3*m + k] * mask_opacity);
+				}
+			}
+			windowed_slice[j++] = (int)temp;
 		}
 	}
 
-	//free(slice);
 	QString msg = "WL: " + QString::number(window_level) + "\nWW: " + QString::number(window_width);
 	emit windowing_info_sig(msg);
 	set_pixmap();
@@ -145,8 +159,8 @@ void SliceWidget::set_pixmap()
 
 	//QPixmap *img_buffer;
 	//img_buffer = new QPixmap();
-	*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_Indexed8));
-	//*img_buffer = img_buffer->scaledToHeight(slice_size);
+	//*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_Indexed8));
+	*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_RGB888));
 	*img_buffer = img_buffer->scaled(slice_size * 7 / 4, slice_size);
 
 	// draw line

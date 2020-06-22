@@ -339,9 +339,10 @@ void DVRWidget::_init_geometry()
 	hs = QVector3D(0, 0, -1);
 	ns = QVector3D(0, 1, 0);
 
-	arcball_last_pos = get_arcball_pos(10, 10);
-	QVector3D arcball_pos = get_arcball_pos(20, 20);
+	arcball_last_pos = get_arcball_pos(250, 250);
+	QVector3D arcball_pos = get_arcball_pos(350, 300);
 	do_rotate(arcball_pos);
+	arcball_last_pos = arcball_pos;
 }
 
 void DVRWidget::_init_windowing()
