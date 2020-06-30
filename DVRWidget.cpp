@@ -186,7 +186,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 	N_max = max(N_x, max(N_y, (int)(N_z * slice_thickness)));
 	screen_dist = N_max * 5;
 
-	int *raw = data_cube->get_raw_data();
+	short *raw = data_cube->get_raw_data();
 
 	free(tex_3d_data);
 	free(tex_3d_border);
@@ -196,7 +196,7 @@ void DVRWidget::set_data(DataCube *d, float r, int a, int b)
 	// build tex data of 3d volume data
 	tex_3d_data = new short[N_x * N_y * N_z];
 	for (int i = 0; i < N_x * N_y * N_z; i++) {
-		int temp = raw[i];
+		short temp = raw[i];
 		temp = a * temp + b; // rescale stored valued to HU (-1000~3096)
 		temp += 1000;		 // move to 0~4095
 		temp *= 8;			 // scale to 0~32768

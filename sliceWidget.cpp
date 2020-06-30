@@ -46,7 +46,7 @@ void SliceWidget::set_data(DataCube *d)
 	data_cube = d;
 	tie(pixel_num_w, pixel_num_h, rescale_slope, rescale_intercept, pixel_min, pixel_max, mask_count) = data_cube->get_pixel_info();
 	slice_data = (int*)malloc(pixel_num_w * pixel_num_h * sizeof(int));
-	mask_data = (int*)malloc(mask_count_w * pixel_num_h * pixel_num * sizeof(int));
+	mask_data = (int*)malloc(mask_count * pixel_num_h * pixel_num_w * sizeof(int));
 	windowed_slice = (unsigned char*)malloc(3 * pixel_num_w * pixel_num_h * sizeof(unsigned char));
 	window_level = 50;
 	window_width = 350;

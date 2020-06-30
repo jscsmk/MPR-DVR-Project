@@ -54,7 +54,7 @@ private:
 	unsigned char *windowed_slice, *masked_slice;
 	QPixmap *blank_img, *loading_img;
 	int slice_type, mode, slice_size_w, slice_size_h, mask_count;
-	float pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max;
+	int pixel_num_w, pixel_num_h, rescale_slope, rescale_intercept, pixel_min, pixel_max;
 	int is_line_visible;
 	int is_line_mouseover_h, is_line_mouseover_v;
 	int line_clicked_v, line_clicked_h;
