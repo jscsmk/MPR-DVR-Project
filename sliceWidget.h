@@ -31,8 +31,8 @@ public slots:
 
 signals:
 	void coord_info_sig(int slice_type, float coord_x, float coord_y, float coord_z, int pixel_val);
-	void mouse_press_sig(int slice_type);
-	void mouse_release_sig(int slice_type);
+	void mouse_press_sig(int slice_type, float coord_x, float coord_y, float coord_z);
+	void mouse_release_sig(int slice_type, float coord_x, float coord_y, float coord_z);
 	void mouse_leave_sig(int slice_type);
 	void windowing_info_sig(QString msg);
 	void line_moved_sig(int which); // which = 0: v-line, 1: h-line, 2: both-line, 3: wheel event
@@ -65,6 +65,7 @@ private:
 	int window_level, window_width;
 	int window_changed, zoom_changed;
 	QPixmap *img_buffer;
+	tuple<float, float, float, int> convert_coord(int mouse_x, int mouse_y);
 };
 
 #endif

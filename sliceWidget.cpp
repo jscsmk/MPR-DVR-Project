@@ -160,7 +160,7 @@ void SliceWidget::set_pixmap()
 		this->setPixmap(blank_img->scaled(slice_size_w, slice_size_h));
 		return;
 	}
-	
+
 	*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num_w, pixel_num_h, QImage::Format_RGB888));
 	*img_buffer = img_buffer->scaled(slice_size_w, slice_size_h);
 
@@ -237,15 +237,23 @@ void SliceWidget::set_pixmap()
 	//free(img_buffer);
 }
 
-void SliceWidget::emit_coord_sig(int mouse_x, int mouse_y)
+tuple<float, float, float, int> SliceWidget::convert_coord(int mouse_x, int mouse_y)
 {
-	int pixel_v, angle_deg;
+	int pixel_v;
 	float coord_x, coord_y, coord_z;
 	int m_x = mouse_x * pixel_num_h / slice_size_h;
 	int m_y = mouse_y * pixel_num_h / slice_size_h;
 
 	tie(coord_x, coord_y, coord_z, pixel_v) = data_cube->get_coord(slice_type, m_x, m_y);
 	pixel_v = rescale_slope * pixel_v + rescale_intercept;
+	return { coord_x, coord_y, coord_z, pixel_v };
+}
+
+void SliceWidget::emit_coord_sig(int mouse_x, int mouse_y)
+{
+	int pixel_v;
+	float coord_x, coord_y, coord_z;
+	tie(coord_x, coord_y, coord_z, pixel_v) = convert_coord(mouse_x, mouse_y);
 	emit coord_info_sig(slice_type, coord_x, coord_y, coord_z, pixel_v);
 }
 
@@ -268,8 +276,10 @@ void SliceWidget::mousePressEvent(QMouseEvent *event)
 		return;
 
 	if (mode > 0) {
-		emit mouse_press_sig(slice_type);
-		emit_coord_sig(event->x(), event->y());
+		int pixel_v;
+		float coord_x, coord_y, coord_z;
+		tie(coord_x, coord_y, coord_z, pixel_v) = convert_coord(event->x(), event->y());
+		emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z);
 	}
 
 	mouse_last_x = event->x();
@@ -287,8 +297,12 @@ void SliceWidget::mouseReleaseEvent(QMouseEvent *event)
 	if (mode < 0)
 		return;
 
-	if (mode > 0)
-		emit mouse_release_sig(slice_type);
+	if (mode > 0) {
+		int pixel_v;
+		float coord_x, coord_y, coord_z;
+		tie(coord_x, coord_y, coord_z, pixel_v) = convert_coord(event->x(), event->y());
+		emit mouse_release_sig(slice_type, coord_x, coord_y, coord_z);
+	}
 
 	line_clicked_h = 0;
 	line_clicked_v = 0;

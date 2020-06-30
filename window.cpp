@@ -36,6 +36,8 @@
 #include "sliceWidget.h"
 
 
+using namespace cgip;
+
 Window::Window(MainWindow *mw)
 	: main_window(mw)
 {
@@ -262,12 +264,12 @@ Window::Window(MainWindow *mw)
 	connect(slice_widget_z, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
 	connect(slice_widget_x, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
 	connect(slice_widget_y, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
-	connect(slice_widget_z, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
-	connect(slice_widget_x, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
-	connect(slice_widget_y, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
-	connect(slice_widget_z, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
-	connect(slice_widget_x, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
-	connect(slice_widget_y, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
+	connect(slice_widget_z, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
+	connect(slice_widget_x, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
+	connect(slice_widget_y, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
+	connect(slice_widget_z, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
+	connect(slice_widget_x, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
+	connect(slice_widget_y, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
 
 	connect(slice_widget_z, SIGNAL(windowing_info_sig(QString)), window_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(windowing_info_sig(QString)), window_x, SLOT(setText(QString)));
@@ -575,20 +577,11 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	}
 	//selected->setText(QString::number(p_min) + ", " + QString::number(p_max));
 
-	// TODO: load mask data
 	free(mask_3d);
-	int mask_count = 4;
+	int mask_count = 1;
 	mask_3d = (short*)malloc(mask_count * z * x * y * sizeof(short));
-	for (int i = 0; i < z; i++) {
-		for (int j = 0; j < y; j++) {
-			for (int k = 0; k < x; k++) {
-				mask_3d[mask_count*(x*y*i + x*j + k) + 0] = 100 < i && i < 150 && 150 < j && j < 250 && 200 < k && k < 230 ? 1 : 0;
-				mask_3d[mask_count*(x*y*i + x*j + k) + 1] = 100 < i && i < 150 && 350 < j && j < 400 && 260 < k && k < 300 ? 1 : 0;
-				mask_3d[mask_count*(x*y*i + x*j + k) + 2] = 100 < i && i < 150 && 250 < j && j < 350 && 100 < k && k < 150 ? 1 : 0;
-				mask_3d[mask_count*(x*y*i + x*j + k) + 3] = 100 < i && i < 150 && 450 < j && j < 500 && 100 < k && k < 150 ? 1 : 0;
-			}
-		}
-	}
+	for (int i = 0; i < x*y*z; i++)
+		mask_3d[i] = 0;
 
 	int slice_pixel_num_h = 512;
 	int slice_pixel_num_w = 512 * 7 / 4;
@@ -596,6 +589,15 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	float unit_ray_len = 1;
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
+
+	cgip_volume = new CgipVolume(x, y, z, data_3d);
+	cgip_mask = new CgipMask(x, y, z, mask_3d);
+	cgip_volume->setSpacingX(1);
+	cgip_volume->setSpacingY(1);
+	cgip_volume->setSpacingZ(slice_thickness);
+
+	// TODO_CGIP: add class objects here
+	// ex) cgip_magic_brush = new CgipMagicBrush(50, 1, cgip_volume, cgip_mask);
 
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
 	data_cube->set_mask(mask_3d, mask_count);
@@ -754,11 +756,13 @@ void Window::toggle_skipping_label()
 }
 void Window::change_function_label()
 {
-	QString mode_text;
-	if (function_mode > 0)
-		mode_text = "current function: " + QString::number(function_mode) + " - end";
-	else
-		mode_text = "current function: OFF";
+	QString mode_text = "current function: ";
+	if (function_mode == 0)
+		mode_text += "OFF";
+	else {
+		mode_text += QString::number(function_mode) + " - ";
+		mode_text += function_started ? "start" : "end";
+	}
 
 	function_label_z->setText(mode_text);
 	function_label_x->setText(mode_text);
@@ -778,9 +782,11 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 	QString msg;
 	msg = "Coord: (" + QString::number(x) + ", " + QString::number(y) + ", " + QString::number(z) + ")\nIntensity(HU): " + QString::number(v);
 
-	if (function_mode > 0) {
-		// TODO: send coord info to function
-		int t = 0;
+	if (function_started == 1) {
+		CgipPoint cur_point(x, y, z / slice_thickness);
+
+		// TODO_CGIP: add move event here
+		// ex) cgip_magic_brush->moveBrush(cur_point);
 	}
 
 	if (slice_type == 0)
@@ -790,25 +796,25 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 	else
 		coord_y->setText(msg);
 }
-void Window::function_start(int slice_type)
+void Window::function_start(int slice_type, float x, float y, float z)
 {
-	// TODO: tell function to start
 	function_started = 1;
-	if (slice_type == 0)
-		function_label_z->setText("current function: " + QString::number(function_mode) + " - start");
-	else if (slice_type == 1)
-		function_label_x->setText("current function: " + QString::number(function_mode) + " - start");
-	else
-		function_label_y->setText("current function: " + QString::number(function_mode) + " - start");
+	change_function_label();
+	CgipPoint cur_point(x, y, z / slice_thickness);
+
+	// TODO_CGIP: add start event here
+	// ex)cgip_magic_brush->startBrush(cur_point);
 }
-void Window::function_end(int slice_type)
+void Window::function_end(int slice_type, float x, float y, float z)
 {
-	// TODO: tell function to terminate
 	function_started = 0;
-	if (slice_type == 0)
-		function_label_z->setText("current function: " + QString::number(function_mode) + " - end");
-	else if (slice_type == 1)
-		function_label_x->setText("current function: " + QString::number(function_mode) + " - end");
-	else
-		function_label_y->setText("current function: " + QString::number(function_mode) + " - end");
+	change_function_label();
+	CgipPoint cur_point(x, y, z / slice_thickness);
+
+	// TODO_CGIP: add end event here
+	// ex) cgip_magic_brush->endBrush(cur_point);
+
+	slice_widget_z->get_slice();
+	slice_widget_x->get_slice();
+	slice_widget_y->get_slice();
 }

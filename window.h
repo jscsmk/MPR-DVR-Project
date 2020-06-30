@@ -5,6 +5,8 @@
 #include "gdcmImageReader.h"
 #include "data_cube.h"
 #include "sliceWidget.h"
+//TODO_CGIP: add header files here
+//ex) #include "cgip_headers/MagicBrush/CgipMagicBrush.h"
 
 class QSignalMapper;
 class QLabel;
@@ -52,8 +54,8 @@ private slots:
 	void change_function_label();
 	void change_function_mode_0();
 	void change_function_mode_1();
-	void function_start(int slice_type);
-	void function_end(int slice_type);
+	void function_start(int slice_type, float x, float y, float z);
+	void function_end(int slice_type, float x, float y, float z);
 	void update_coord(int slice_type, float x, float y, float z, int v);
 
 private:
@@ -85,6 +87,12 @@ private:
 	short *data_3d, *mask_3d;
 	bool skipping_mode;
 	int function_mode, function_started;
+
+	cgip::CgipVolume *cgip_volume;
+	cgip::CgipMask *cgip_mask;
+
+	//TODO_CGIP: add pointers for class objects of functions
+	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
 };
 
 #endif

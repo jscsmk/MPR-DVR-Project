@@ -32,6 +32,7 @@ public:
 	int slice_panning(int slice_type, float dx, float dy);
 	void toggle_border_line(int slice_type);
 	tuple<QVector3D, QVector3D, QVector3D, QVector3D, float, QVector3D, QVector3D, QVector3D, QVector3D, float, QVector3D, QVector3D, QVector3D, QVector3D, float> get_slice_info();
+	tuple<QVector3D, QVector3D, QVector3D, int, int, float> get_MPR_info(int slice_type);
 
 protected:
 	int trilinear_interpolation(int slice_type, float x, float y, float z);
