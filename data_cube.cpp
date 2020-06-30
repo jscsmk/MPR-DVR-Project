@@ -20,15 +20,15 @@ DataCube::DataCube()
 	z_border_visible = 0;
 }
 
-void DataCube::set_data(int *data, int *mask, int n_m, int x, int y, int z, int p, int a, int b, float t, int mi, int ma)
+void DataCube::set_data(short *data, int x, int y, int z, int p_w, int p_h, int a, int b, float t, int mi, int ma)
 {
 	data_3d = data;
-	mask_3d = mask;
-	N_mask = n_m;
 	N_x = x;
 	N_y = y;
 	N_z = z;
-	slice_pixel_num = p;
+	slice_pixel_num_w = p_w;
+	slice_pixel_num_h = p_h;
+	wh_ratio = ((float)slice_pixel_num_w) / slice_pixel_num_h;
 	rescale_slope = a;
 	rescale_intercept = b;
 	slice_thickness = t;
@@ -45,13 +45,19 @@ void DataCube::set_data(int *data, int *mask, int n_m, int x, int y, int z, int 
 	init_MPR();
 }
 
+void DataCube::set_mask(short *mask, int n_m)
+{
+	mask_3d = mask;
+	N_mask = n_m;
+}
+
 void DataCube::init_MPR()
 {
 	L_x = N_max;
 	L_y = N_max;
 	L_z = N_max;
 
-	pixel_len_x = L_x / (slice_pixel_num - 1);
+	pixel_len_x = L_x / (slice_pixel_num_h - 1);
 	pixel_len_y = pixel_len_x;
 	pixel_len_z = pixel_len_x;
 
@@ -68,9 +74,9 @@ void DataCube::init_MPR()
 	wz = QVector3D(1, 0, 0);
 	hz = QVector3D(0, 1, 0);
 
-	qz = P_axis - QVector3D(L_z * 7 / 8, L_z / 2, 0);
-	qx = P_axis + QVector3D(0, L_x * 7 / 8, -L_x / 2);
-	qy = P_axis - QVector3D(L_y * 7 / 8, 0, L_y / 2);
+	qz = P_axis - QVector3D(L_z * wh_ratio / 2, L_z / 2, 0);
+	qx = P_axis + QVector3D(0, L_x * wh_ratio / 2, -L_x / 2);
+	qy = P_axis - QVector3D(L_y * wh_ratio / 2, 0, L_y / 2);
 
 	r_x = PI / 2;
 	r_y = 0;
@@ -81,15 +87,15 @@ tuple<int, int, int, float> DataCube::get_data_size()
 {
 	return { N_x, N_y, N_z, slice_thickness };
 }
-tuple<int, int, int, int, int, int> DataCube::get_pixel_info()
+tuple<int, int, int, int, int, int, int> DataCube::get_pixel_info()
 {
-	return {slice_pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max, N_mask };
+	return { slice_pixel_num_w, slice_pixel_num_h, rescale_slope, rescale_intercept, pixel_min, pixel_max, N_mask };
 }
-int* DataCube::get_raw_data()
+short* DataCube::get_raw_data()
 {
 	return data_3d;
 }
-int* DataCube::get_cur_mask()
+short* DataCube::get_cur_mask()
 {
 	return mask_3d;
 }
@@ -131,17 +137,17 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 	w = pl * w;
 	h = pl * h;
 
-	for (int i = 0; i < slice_pixel_num; i++) {
+	for (int i = 0; i < slice_pixel_num_h; i++) {
 		temp = start;
 
-		for (int j = 0; j < slice_pixel_num * 7 / 4; j++) {
+		for (int j = 0; j < slice_pixel_num_w; j++) {
 			int interpolated_data, cn_x, cn_y, cn_z;
 			interpolated_data = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
 			tie(cn_x, cn_y, cn_z) = closest_neighbor(temp.x(), temp.y(), temp.z());
-			slice_data[slice_pixel_num*i * 7 / 4 + j] = interpolated_data;
+			slice_data[slice_pixel_num_w*i + j] = interpolated_data;
 
 			for (int m = 0; m < N_mask; m++) {
-				mask_data[N_mask*(slice_pixel_num*i * 7 / 4 + j) + m] = cn_x > 0 ? mask_3d[N_mask*(N_x*N_y*cn_z + N_x * cn_y + cn_x) + m] : 0;
+				mask_data[N_mask*(slice_pixel_num_w * i + j) + m] = cn_x > 0 ? mask_3d[N_mask*(N_x*N_y*cn_z + N_x * cn_y + cn_x) + m] : 0;
 			}
 			temp = temp + w;
 		}
@@ -228,7 +234,7 @@ int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 		return pixel_min;
 	}
 
-	int fA, fB, fC, fD, fE, fF, fG, fH;
+	short fA, fB, fC, fD, fE, fF, fG, fH;
 	float fM, fN, fU, fV, fR, fS, fP;
 	float a, b;
 
@@ -421,9 +427,9 @@ int DataCube::move_center(int slice_type, float dx, float dy)
 		return 0;
 
 	P_axis = new_p;
-	qz = P_axis - (wz * 7 / 4 + hz) * L_z / 2;
-	qx = P_axis - (wx * 7 / 4 + hx) * L_x / 2;
-	qy = P_axis - (wy * 7 / 4 + hy) * L_y / 2;
+	qz = P_axis - (wz * wh_ratio + hz) * L_z / 2;
+	qx = P_axis - (wx * wh_ratio + hx) * L_x / 2;
+	qy = P_axis - (wy * wh_ratio + hy) * L_y / 2;
 
 	return 1;
 }
@@ -435,24 +441,24 @@ int DataCube::zoom_slice(int slice_type, float d)
 			return 0;
 
 		L_z += d;
-		pixel_len_z = L_z / (slice_pixel_num - 1);
-		qz = qz - (wz * 7 / 4 + hz) * d / 2;
+		pixel_len_z = L_z / (slice_pixel_num_h - 1);
+		qz = qz - (wz * wh_ratio + hz) * d / 2;
 	}
 	else if (slice_type == 1) { // x slice
 		if (L_x + d < N_max / 10 || 5 * N_max < L_x + d)
 			return 0;
 
 		L_x += d;
-		pixel_len_x = L_x / (slice_pixel_num - 1);
-		qx = qx - (wx * 7 / 4 + hx) * d / 2;
+		pixel_len_x = L_x / (slice_pixel_num_h - 1);
+		qx = qx - (wx * wh_ratio + hx) * d / 2;
 	}
 	else { // y slice
 		if (L_y + d < N_max / 10 || 5 * N_max < L_y + d)
 			return 0;
 
 		L_y += d;
-		pixel_len_y = L_y / (slice_pixel_num - 1);
-		qy = qy - (wy * 7 / 4 + hy) * d / 2;
+		pixel_len_y = L_y / (slice_pixel_num_h - 1);
+		qy = qy - (wy * wh_ratio + hy) * d / 2;
 	}
 
 	return 1;

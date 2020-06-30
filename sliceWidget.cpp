@@ -14,12 +14,13 @@ using namespace std;
 #define PI 3.141592
 
 
-SliceWidget::SliceWidget(int t, int s)
+SliceWidget::SliceWidget(int t, int s_w, int s_h)
 {
 	slice_type = t;
 	mode = -1;
 	is_line_visible = 1;
-	slice_size = s;
+	slice_size_w = s_w;
+	slice_size_h = s_h;
 
 	QString blank_path = "images/blank_image.png";
 	QString loading_path = "images/loading_image.png";
@@ -43,10 +44,10 @@ void SliceWidget::set_data(DataCube *d)
 {
 	mode = 0;
 	data_cube = d;
-	tie(pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max, mask_count) = data_cube->get_pixel_info();
-	slice_data = (int*)malloc(pixel_num * pixel_num * sizeof(int) * 7 / 4);
-	mask_data = (int*)malloc(mask_count * pixel_num * pixel_num * sizeof(int) * 7 / 4);
-	windowed_slice = (unsigned char*)malloc(3 * pixel_num * pixel_num * sizeof(unsigned char) * 7 / 4);
+	tie(pixel_num_w, pixel_num_h, rescale_slope, rescale_intercept, pixel_min, pixel_max, mask_count) = data_cube->get_pixel_info();
+	slice_data = (int*)malloc(pixel_num_w * pixel_num_h * sizeof(int));
+	mask_data = (int*)malloc(mask_count_w * pixel_num_h * pixel_num * sizeof(int));
+	windowed_slice = (unsigned char*)malloc(3 * pixel_num_w * pixel_num_h * sizeof(unsigned char));
 	window_level = 50;
 	window_width = 350;
 	window_changed = 0;
@@ -106,7 +107,7 @@ void SliceWidget::apply_windowing()
 	};
 	float mask_opacity = 0.5;
 
-	for (int i = 0, j = 0; i < pixel_num * pixel_num * 7 / 4; i++) {
+	for (int i = 0, j = 0; i < pixel_num_w * pixel_num_h; i++) {
 		float temp = (float)(slice_data[i]);
 
 		if (temp < pixel_min) {
@@ -156,26 +157,12 @@ void SliceWidget::set_pixmap()
 {
 
 	if (mode < 0) {
-		// set blank img when not valid
-		//img_buffer = blank_img;
-		//*img_buffer = img_buffer->scaledToHeight(slice_size);
-		//*img_buffer = img_buffer->scaled(slice_size * 7 / 4, slice_size);
-
-		this->setPixmap(blank_img->scaled(slice_size * 7 / 4, slice_size));
+		this->setPixmap(blank_img->scaled(slice_size_w, slice_size_h));
 		return;
 	}
-
-	// draw line, then set pixmap of this widget
-	//QImage *img;
-	//img = new QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_Indexed8);
-
-	//QImage img2(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_Indexed8);
-
-	//QPixmap *img_buffer;
-	//img_buffer = new QPixmap();
-	//*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_Indexed8));
-	*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num * 7 / 4, pixel_num, QImage::Format_RGB888));
-	*img_buffer = img_buffer->scaled(slice_size * 7 / 4, slice_size);
+	
+	*img_buffer = QPixmap::fromImage(QImage(windowed_slice, pixel_num_w, pixel_num_h, QImage::Format_RGB888));
+	*img_buffer = img_buffer->scaled(slice_size_w, slice_size_h);
 
 	// draw line
 	if (is_line_visible == 1) {
@@ -185,10 +172,10 @@ void SliceWidget::set_pixmap()
 
 		tie(line_x, line_y, line_angle_rad) = data_cube->get_line_info(slice_type);
 		line_angle_deg = line_angle_rad * -180 / PI;
-		line_x_scaled = line_x * slice_size / pixel_num;
-		line_y_scaled = line_y * slice_size / pixel_num;
+		line_x_scaled = line_x * slice_size_h / pixel_num_h;
+		line_y_scaled = line_y * slice_size_h / pixel_num_h;
 		angleline.setP1(QPointF(line_x_scaled, line_y_scaled));
-		angleline.setLength(4 * slice_size);
+		angleline.setLength(4 * slice_size_h);
 
 		// red: z-slice, green: x-slice, blue: y-slice
 		if (slice_type == 0) { // z slice
@@ -254,8 +241,8 @@ void SliceWidget::emit_coord_sig(int mouse_x, int mouse_y)
 {
 	int pixel_v, angle_deg;
 	float coord_x, coord_y, coord_z;
-	int m_x = mouse_x * pixel_num / slice_size;
-	int m_y = mouse_y * pixel_num / slice_size;
+	int m_x = mouse_x * pixel_num_h / slice_size_h;
+	int m_y = mouse_y * pixel_num_h / slice_size_h;
 
 	tie(coord_x, coord_y, coord_z, pixel_v) = data_cube->get_coord(slice_type, m_x, m_y);
 	pixel_v = rescale_slope * pixel_v + rescale_intercept;
@@ -319,8 +306,8 @@ void SliceWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
 	float dx = (float)(event->x() - line_x_scaled);
 	float dy = (float)(event->y() - line_y_scaled);
-	dx = dx * pixel_num / slice_size;
-	dy = dy * pixel_num / slice_size;
+	dx = dx * pixel_num_h / slice_size_h;
+	dy = dy * pixel_num_h / slice_size_h;
 
 	int moved = data_cube->move_center(slice_type, dx, dy);
 	if (moved == 1) {
@@ -366,10 +353,10 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		mouse_x = 0;
 	if (mouse_y < 0)
 		mouse_y = 0;
-	if (mouse_x >= slice_size * 7 / 4)
-		mouse_x = slice_size * 7 / 4 - 1;
-	if (mouse_y >= slice_size)
-		mouse_y = slice_size - 1;
+	if (mouse_x >= slice_size_w)
+		mouse_x = slice_size_w - 1;
+	if (mouse_y >= slice_size_h)
+		mouse_y = slice_size_h - 1;
 
 	float mouse_angle_rad = get_mouse_angle(mouse_x, mouse_y);
 
@@ -409,8 +396,8 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		if (is_line_visible == 1 && (line_clicked_h + line_clicked_v) > 0) { // when clicked line
 			float dx = (float)(mouse_x - mouse_last_x);
 			float dy = (float)(mouse_y - mouse_last_y);
-			dx = dx * pixel_num / slice_size;
-			dy = dy * pixel_num / slice_size;
+			dx = dx * pixel_num_h / slice_size_h;
+			dy = dy * pixel_num_h / slice_size_h;
 			int moved_v = 0;
 			int moved_h = 0;
 
@@ -508,8 +495,8 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 	else if (event->buttons() & Qt::MidButton) { // when mid(wheel) pressed == panning
 		float dx = (float)(mouse_last_x - mouse_x);
 		float dy = (float)(mouse_last_y - mouse_y);
-		dx = dx * pixel_num / slice_size;
-		dy = dy * pixel_num / slice_size;
+		dx = dx * pixel_num_h / slice_size_h;
+		dy = dy * pixel_num_h / slice_size_h;
 
 		int moved = data_cube->slice_panning(slice_type, dx, dy);
 		if (moved == 1) {

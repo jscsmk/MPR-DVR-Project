@@ -16,7 +16,7 @@ class SliceWidget : public QLabel
 	Q_OBJECT
 
 public:
-	SliceWidget(int t, int s);
+	SliceWidget(int t, int s_w, int s_h);
 	void set_data(DataCube *d);
 	void set_mode(int m);
 	void get_slice();
@@ -53,7 +53,7 @@ private:
 	int *slice_data, *mask_data;
 	unsigned char *windowed_slice, *masked_slice;
 	QPixmap *blank_img, *loading_img;
-	int slice_type, mode, slice_size, mask_count;
+	int slice_type, mode, slice_size_w, slice_size_h, mask_count;
 	float pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max;
 	int is_line_visible;
 	int is_line_mouseover_h, is_line_mouseover_v;

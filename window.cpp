@@ -53,9 +53,9 @@ Window::Window(MainWindow *mw)
 	// add XYZ slice widgets
 	view_size_h = 600;
 	view_size_w = 600 * 7 / 4;
-	slice_widget_z = new SliceWidget(0, view_size_h);
-	slice_widget_x = new SliceWidget(1, view_size_h);
-	slice_widget_y = new SliceWidget(2, view_size_h);
+	slice_widget_z = new SliceWidget(0, view_size_w, view_size_h);
+	slice_widget_x = new SliceWidget(1, view_size_w, view_size_h);
+	slice_widget_y = new SliceWidget(2, view_size_w, view_size_h);
 	slice_widget_z->setMouseTracking(true);
 	slice_widget_x->setMouseTracking(true);
 	slice_widget_y->setMouseTracking(true);
@@ -523,7 +523,7 @@ void Window::get_path()
 void Window::load_images(int z, int x, int y, int a, int b)
 {
 	free(data_3d);
-	data_3d = (int*)malloc(z * x * y * sizeof(int));
+	data_3d = (short*)malloc(z * x * y * sizeof(short));
 
 	int p_min, p_max;
 	p_min = 0;
@@ -550,7 +550,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 			for (int j = 0; j < y; j++)	{
 				for (int k = 0; k < x; k++)	{
 					short stored_pixel_value = *buffer16;
-					data_3d[x*y*i + x * j + k] = (int)stored_pixel_value;
+					data_3d[x*y*i + x * j + k] = (short)stored_pixel_value;
 					buffer16++;
 
 					if (p_max < stored_pixel_value)
@@ -578,7 +578,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	// TODO: load mask data
 	free(mask_3d);
 	int mask_count = 4;
-	mask_3d = (int*)malloc(mask_count * z * x * y * sizeof(int));
+	mask_3d = (short*)malloc(mask_count * z * x * y * sizeof(short));
 	for (int i = 0; i < z; i++) {
 		for (int j = 0; j < y; j++) {
 			for (int k = 0; k < x; k++) {
@@ -590,14 +590,15 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		}
 	}
 
-	int slice_pixel_num = 512;
+	int slice_pixel_num_h = 512;
+	int slice_pixel_num_w = 512 * 7 / 4;
 	int dvr_pixel_num = 512;
 	float unit_ray_len = 1;
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
 
-	data_cube->set_data(data_3d, mask_3d, mask_count, x, y, z, slice_pixel_num, a, b, slice_thickness, p_min, p_max);
-
+	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
+	data_cube->set_mask(mask_3d, mask_count);
 	slice_widget_z->set_data(data_cube);
 	slice_widget_x->set_data(data_cube);
 	slice_widget_y->set_data(data_cube);
