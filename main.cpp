@@ -1,5 +1,4 @@
 #include "mainwindow.h"
-#include "glwidget.h"
 #include <QApplication>
 #include <QDesktopWidget>
 #include <QSurfaceFormat>
@@ -40,14 +39,6 @@ int main(int argc, char *argv[])
 
 	MainWindow mainWindow;
 	mainWindow.setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
-	//(mainWindow.statusBar())->setSizeGripEnabled(false);
-	//mainWindow.setFixedSize(1300,800);
-
-	GLWidget::setTransparent(parser.isSet(transparentOption));
-	if (GLWidget::isTransparent()) {
-		mainWindow.setAttribute(Qt::WA_TranslucentBackground);
-		mainWindow.setAttribute(Qt::WA_NoSystemBackground, false);
-	}
 	mainWindow.resize(mainWindow.sizeHint());
 	int desktopArea = QApplication::desktop()->width() *
 		QApplication::desktop()->height();
