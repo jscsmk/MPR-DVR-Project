@@ -26,6 +26,7 @@
 #include <QPalette>
 #include <QAction>
 #include <QMenu>
+#include <string>
 
 #include "gdcmImageReader.h"
 #include "gdcmReader.h"
@@ -50,10 +51,11 @@ Window::Window(MainWindow *mw)
 	*/
 
 	// add XYZ slice widgets
-	view_size = 600;
-	slice_widget_z = new SliceWidget(0, view_size);
-	slice_widget_x = new SliceWidget(1, view_size);
-	slice_widget_y = new SliceWidget(2, view_size);
+	view_size_h = 600;
+	view_size_w = 600 * 7 / 4;
+	slice_widget_z = new SliceWidget(0, view_size_h);
+	slice_widget_x = new SliceWidget(1, view_size_h);
+	slice_widget_y = new SliceWidget(2, view_size_h);
 	slice_widget_z->setMouseTracking(true);
 	slice_widget_x->setMouseTracking(true);
 	slice_widget_y->setMouseTracking(true);
@@ -63,6 +65,8 @@ Window::Window(MainWindow *mw)
 	data_3d = NULL;
 	mask_3d = NULL;
 	dvr_widget = NULL;
+	function_mode = 0;
+	function_started = 0;
 
 	// add local file browser
 	QString root_path = "c:/vscode_workspace";
@@ -88,8 +92,12 @@ Window::Window(MainWindow *mw)
 
 	// add menubar for MPR
 	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;
+	QMenu *function_select_menu_z, *function_select_menu_x, *function_select_menu_y;
 	QAction *toggle_slice_line_z, *toggle_slice_line_x, *toggle_slice_line_y;
 	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
+	QAction *function_select_0_z, *function_select_0_x, *function_select_0_y;
+	QAction *function_select_1_z, *function_select_1_x, *function_select_1_y;
+	// add actions for functions here
 	QAction *init_all, *init_geometry, *init_windowing;
 
 	QMenu *toggle_menu_dvr, *init_menu_dvr;
@@ -114,6 +122,13 @@ Window::Window(MainWindow *mw)
 	init_DVR_geometry = new QAction("reset geometry");
 	init_DVR_windowing = new QAction("reset window level and width");
 
+	function_select_0_z = new QAction("off");
+	function_select_0_x = new QAction("off");
+	function_select_0_y = new QAction("off");
+	function_select_1_z = new QAction("function 1");
+	function_select_1_x = new QAction("function 1");
+	function_select_1_y = new QAction("function 1");
+
 	toggle_menu_z = new QMenu();
 	toggle_menu_x = new QMenu();
 	toggle_menu_y = new QMenu();
@@ -136,6 +151,16 @@ Window::Window(MainWindow *mw)
 	init_menu_y->addAction(init_all);
 	init_menu_y->addAction(init_geometry);
 	init_menu_y->addAction(init_windowing);
+
+	function_select_menu_z = new QMenu();
+	function_select_menu_x = new QMenu();
+	function_select_menu_y = new QMenu();
+	function_select_menu_z->addAction(function_select_0_z);
+	function_select_menu_z->addAction(function_select_1_z);
+	function_select_menu_x->addAction(function_select_0_x);
+	function_select_menu_x->addAction(function_select_1_x);
+	function_select_menu_y->addAction(function_select_0_y);
+	function_select_menu_y->addAction(function_select_1_y);
 
 	toggle_menu_dvr = new QMenu();
 	init_menu_dvr = new QMenu();
@@ -169,10 +194,13 @@ Window::Window(MainWindow *mw)
 	menubar_layout_y->addWidget(name_y);
 	menubar_layout_dvr->addWidget(name_dvr);
 
+	add_menubar_button(menubar_layout_z, function_select_menu_z, "icons/function.png");
 	add_menubar_button(menubar_layout_z, toggle_menu_z, "icons/view.png");
 	add_menubar_button(menubar_layout_z, init_menu_z, "icons/reset.png");
+	add_menubar_button(menubar_layout_x, function_select_menu_x, "icons/function.png");
 	add_menubar_button(menubar_layout_x, toggle_menu_x, "icons/view.png");
 	add_menubar_button(menubar_layout_x, init_menu_x, "icons/reset.png");
+	add_menubar_button(menubar_layout_y, function_select_menu_y, "icons/function.png");
 	add_menubar_button(menubar_layout_y, toggle_menu_y, "icons/view.png");
 	add_menubar_button(menubar_layout_y, init_menu_y, "icons/reset.png");
 	add_menubar_button(menubar_layout_dvr, toggle_menu_dvr, "icons/view.png");
@@ -197,18 +225,17 @@ Window::Window(MainWindow *mw)
 	selected = new QLabel("Path: ");
 	selected->setAlignment(Qt::AlignLeft);;
 
-	coord_z = create_label(slice_widget_z);
-	coord_x = create_label(slice_widget_x);
-	coord_y = create_label(slice_widget_y);
-	window_z = create_label(slice_widget_z);
-	window_x = create_label(slice_widget_x);
-	window_y = create_label(slice_widget_y);
-
-	coord_z->move(view_size * 7 / 4 - 150, view_size - 40);
-	coord_x->move(view_size * 7 / 4 - 150, view_size - 40);
-	coord_y->move(view_size * 7 / 4 - 150, view_size - 40);
-
-
+	QLabel *window_z, *window_x, *window_y;
+	coord_z = create_label(slice_widget_z, view_size_w - 250, view_size_h - 40);
+	coord_x = create_label(slice_widget_x, view_size_w - 250, view_size_h - 40);
+	coord_y = create_label(slice_widget_y, view_size_w - 250, view_size_h - 40);
+	window_z = create_label(slice_widget_z, 10, view_size_h - 40);
+	window_x = create_label(slice_widget_x, 10, view_size_h - 40);
+	window_y = create_label(slice_widget_y, 10, view_size_h - 40);
+	function_label_z = create_label(slice_widget_z, 10, 10);
+	function_label_x = create_label(slice_widget_x, 10, 10);
+	function_label_y = create_label(slice_widget_y, 10, 10);
+	change_function_label();
 
 	// add connections
 	connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(get_path()));
@@ -225,9 +252,22 @@ Window::Window(MainWindow *mw)
 	connect(init_geometry, &QAction::triggered, this, &Window::_init_geometry);
 	connect(init_windowing, &QAction::triggered, this, &Window::_init_windowing);
 
-	connect(slice_widget_z, SIGNAL(coord_info_sig(QString)), coord_z, SLOT(setText(QString)));
-	connect(slice_widget_x, SIGNAL(coord_info_sig(QString)), coord_x, SLOT(setText(QString)));
-	connect(slice_widget_y, SIGNAL(coord_info_sig(QString)), coord_y, SLOT(setText(QString)));
+	connect(function_select_0_z, &QAction::triggered, this, &Window::change_function_mode_0);
+	connect(function_select_0_x, &QAction::triggered, this, &Window::change_function_mode_0);
+	connect(function_select_0_y, &QAction::triggered, this, &Window::change_function_mode_0);
+	connect(function_select_1_z, &QAction::triggered, this, &Window::change_function_mode_1);
+	connect(function_select_1_x, &QAction::triggered, this, &Window::change_function_mode_1);
+	connect(function_select_1_y, &QAction::triggered, this, &Window::change_function_mode_1);
+
+	connect(slice_widget_z, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
+	connect(slice_widget_x, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
+	connect(slice_widget_y, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
+	connect(slice_widget_z, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
+	connect(slice_widget_x, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
+	connect(slice_widget_y, SIGNAL(mouse_press_sig(int)), this, SLOT(function_start(int)));
+	connect(slice_widget_z, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
+	connect(slice_widget_x, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
+	connect(slice_widget_y, SIGNAL(mouse_release_sig(int)), this, SLOT(function_end(int)));
 
 	connect(slice_widget_z, SIGNAL(windowing_info_sig(QString)), window_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(windowing_info_sig(QString)), window_x, SLOT(setText(QString)));
@@ -275,7 +315,7 @@ Window::Window(MainWindow *mw)
 	QString blank_path = "images/blank_image.png";
 	QImage *img = new QImage(blank_path);
 	QPixmap *blank_img = new QPixmap(QPixmap::fromImage(*img));
-	*blank_img = blank_img->scaled(view_size * 7 / 4, view_size);
+	*blank_img = blank_img->scaled(view_size_w, view_size_h);
 
 	blank_dvr = new QLabel();
 	blank_dvr->setPixmap(*blank_img);
@@ -315,6 +355,9 @@ void Window::hide_tree()
 
 void Window::_init_geometry()
 {
+	if (function_mode > 0)
+		return;
+
 	data_cube->init_MPR();
 
 	slice_widget_z->get_slice();
@@ -336,6 +379,27 @@ void Window::_init_all()
 	slice_widget_y->init_windowing(0);
 
 	_init_geometry();
+}
+void Window::_set_mode() {
+	slice_widget_z->set_mode(function_mode);
+	slice_widget_x->set_mode(function_mode);
+	slice_widget_y->set_mode(function_mode);
+}
+void Window::change_function_mode_0()
+{
+	if (function_mode != 0) {
+		function_mode = 0;
+		change_function_label();
+		_set_mode();
+	}
+}
+void Window::change_function_mode_1()
+{
+	if (function_mode != 1)	{
+		function_mode = 1;
+		change_function_label();
+		_set_mode();
+	}
 }
 
 void Window::get_path()
@@ -542,18 +606,14 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		container_3->removeItem(container_3->itemAt(3));
 		blank_dvr->setVisible(false);
 
-		dvr_widget = new DVRWidget(data_cube, unit_ray_len, a, b, dvr_pixel_num, view_size);
-		//dvr_widget->set_data(data_cube, dvr_pixel_num, unit_ray_len, a, b);
+		dvr_widget = new DVRWidget(data_cube, unit_ray_len, a, b, dvr_pixel_num, view_size_h);
 		dvr_widget->setMouseTracking(true);
 
-		window_dvr = create_label(dvr_widget);
-		//coord_dvr = create_label(dvr_widget);
-		//coord_dvr->move(2 * view_size - 260, view_size - 40);
-		skipping_label = create_label(dvr_widget);
+		window_dvr = create_label(dvr_widget, 10, view_size_h - 40);
+		skipping_label = create_label(dvr_widget, 10, 10);
 		skipping_label->move(10, 10);
 		skipping_label->setText(skip_text);
 
-		//connect(dvr_widget, SIGNAL(coord_info_sig(QString)), coord_dvr, SLOT(setText(QString)));
 		connect(dvr_widget, SIGNAL(windowing_info_sig(QString)), window_dvr, SLOT(setText(QString)));
 		connect(init_DVR_all, &QAction::triggered, dvr_widget, &DVRWidget::init_all);
 		connect(init_DVR_geometry, &QAction::triggered, dvr_widget, &DVRWidget::init_geometry);
@@ -571,21 +631,19 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	else {
 		dvr_widget->set_data(data_cube, unit_ray_len, a, b);
 		window_dvr->setParent(dvr_widget);
-		window_dvr->move(10, view_size - 40);
+		window_dvr->move(10, view_size_h - 40);
 		skipping_label->setParent(dvr_widget);
 		skipping_label->move(10, 10);
 		skipping_label->setText(skip_text);
-		//coord_dvr->setParent(dvr_widget);
-		//coord_dvr->move(2 * view_size - 260, view_size - 40);
 	}
 }
 
-QLabel *Window::create_label(QWidget *sw)
+QLabel *Window::create_label(QWidget *sw, int loc_w, int loc_h)
 {
 	QLabel *label = new QLabel;
 	label->setFixedSize(180, 30);
 	label->setParent(sw);
-	label->move(10, view_size - 40);
+	label->move(loc_w, loc_h);
 
 	QPalette pal = palette();
 	pal.setColor(label->foregroundRole(), Qt::white);
@@ -688,11 +746,23 @@ void Window::update_dvr_slices()
 void Window::toggle_skipping_label()
 {
 	QString skip_text;
-	skip_text = skipping_mode ? "empty-space skipping: OFF" : "empty-space skipping: ON";
+	skip_text = skipping_mode ? "OFF" : "ON";
+	skip_text = "empty-space skipping: " + skip_text;
 	skipping_label->setText(skip_text);
 	skipping_mode = skipping_mode ? false : true;
 }
+void Window::change_function_label()
+{
+	QString mode_text;
+	if (function_mode > 0)
+		mode_text = "current function: " + QString::number(function_mode) + " - end";
+	else
+		mode_text = "current function: OFF";
 
+	function_label_z->setText(mode_text);
+	function_label_x->setText(mode_text);
+	function_label_y->setText(mode_text);
+}
 
 void Window::keyPressEvent(QKeyEvent *e)
 {
@@ -702,69 +772,42 @@ void Window::keyPressEvent(QKeyEvent *e)
 		QWidget::keyPressEvent(e);
 }
 
+void Window::update_coord(int slice_type, float x, float y, float z, int v)
+{
+	QString msg;
+	msg = "Coord: (" + QString::number(x) + ", " + QString::number(y) + ", " + QString::number(z) + ")\nIntensity(HU): " + QString::number(v);
 
-/*
-void Window::onMapped_1(QWidget *widget)
-{
-	QSlider *slider = qobject_cast<QSlider*>(signalMapper_1->mapping(widget));
-	QLabel *label = qobject_cast<QLabel*>(widget);
-	idx_z = slider->value();
-	set_pixmap(1);
-}
-void Window::onMapped_2(QWidget *widget)
-{
-	QSlider *slider = qobject_cast<QSlider*>(signalMapper_2->mapping(widget));
-	QLabel *label = qobject_cast<QLabel*>(widget);
-	idx_x = slider->value();
-	set_pixmap(1);
-}
-void Window::onMapped_3(QWidget *widget)
-{
-	QSlider *slider = qobject_cast<QSlider*>(signalMapper_3->mapping(widget));
-	QLabel *label = qobject_cast<QLabel*>(widget);
-	idx_y = slider->value();
-	set_pixmap(1);
-}
+	if (function_mode > 0) {
+		// TODO: send coord info to function
+		int t = 0;
+	}
 
-QSlider *Window::createSlider(int x)
-{
-	QSlider *slider;
-	if (x == 0)
-		slider = new QSlider(Qt::Vertical, 0);
+	if (slice_type == 0)
+		coord_z->setText(msg);
+	else if (slice_type == 1)
+		coord_x->setText(msg);
 	else
-		slider = new QSlider(Qt::Horizontal, 0);
-
-	slider->setRange(0, 360 * 16);
-	slider->setSingleStep(16);
-	slider->setPageStep(15 * 16);
-	slider->setTickInterval(15 * 16);
-	slider->setTickPosition(QSlider::TicksRight);
-	return slider;
+		coord_y->setText(msg);
 }
-
-void Window::dockUndock()
+void Window::function_start(int slice_type)
 {
-	if (parent()) {
-		setParent(0);
-		setAttribute(Qt::WA_DeleteOnClose);
-		move(QApplication::desktop()->width() / 2 - width() / 2,
-			QApplication::desktop()->height() / 2 - height() / 2);
-		dockBtn->setText(tr("Dock"));
-		show();
-	}
-	else {
-		if (!mainWindow->centralWidget()) {
-			if (mainWindow->isVisible()) {
-				setAttribute(Qt::WA_DeleteOnClose, false);
-				dockBtn->setText(tr("Undock"));
-				mainWindow->setCentralWidget(this);
-			}
-			else {
-				QMessageBox::information(0, tr("Cannot dock"), tr("Main window already closed"));
-			}
-		}
-		else {
-			QMessageBox::information(0, tr("Cannot dock"), tr("Main window already occupied"));
-		}
-	}
-}*/
+	// TODO: tell function to start
+	function_started = 1;
+	if (slice_type == 0)
+		function_label_z->setText("current function: " + QString::number(function_mode) + " - start");
+	else if (slice_type == 1)
+		function_label_x->setText("current function: " + QString::number(function_mode) + " - start");
+	else
+		function_label_y->setText("current function: " + QString::number(function_mode) + " - start");
+}
+void Window::function_end(int slice_type)
+{
+	// TODO: tell function to terminate
+	function_started = 0;
+	if (slice_type == 0)
+		function_label_z->setText("current function: " + QString::number(function_mode) + " - end");
+	else if (slice_type == 1)
+		function_label_x->setText("current function: " + QString::number(function_mode) + " - end");
+	else
+		function_label_y->setText("current function: " + QString::number(function_mode) + " - end");
+}

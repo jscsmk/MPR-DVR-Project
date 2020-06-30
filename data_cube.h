@@ -22,7 +22,7 @@ public:
 	int* get_raw_data();
 	int* get_cur_mask();
 	void get_slice(int slice_type, int *slice_data, int *mask_data);
-	tuple<int, int, int, int> get_coord(int slice_type, int m_x, int m_y);
+	tuple<float, float, float, int> get_coord(int slice_type, int m_x, int m_y);
 	tuple<int, int, float> get_line_info(int slice_type);
 	int move_slice(int from, int target, float distance);
 	int rotate_slice(int slice_type, float a);
@@ -32,30 +32,9 @@ public:
 	void toggle_border_line(int slice_type);
 	tuple<QVector3D, QVector3D, QVector3D, QVector3D, float, QVector3D, QVector3D, QVector3D, QVector3D, float, QVector3D, QVector3D, QVector3D, QVector3D, float> get_slice_info();
 
-	/*int* get_DVR_screen();
-	int rotate_DVR_screen(float dx, float dy);
-	int panning_DVR_screen(float dx, float dy);
-	int zoom_DVR_screen(float d);
-
-
-	 TODO:
-		add methods for MPR
-		 - thickening the slice -> get avg/max/min
-		 - show border -> color?
-		add methods for DVR(ray-casting)
-		 - rotate
-		 - panning
-		 - zooming
-		 - windowing
-		 - show border
-	*/
-
-
 protected:
-	tuple<int, int, int, int> trilinear_interpolation(int slice_type, float x, float y, float z);
+	int trilinear_interpolation(int slice_type, float x, float y, float z);
 	tuple<int, int, int> closest_neighbor(float x, float y, float z);
-	//int ray_casting(float x, float y, float z);
-	//QVector3D ray_penetrating_point(QVector3D r);
 
 private:
 	int *data_3d;							// 3d data points

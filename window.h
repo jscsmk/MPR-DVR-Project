@@ -42,27 +42,36 @@ private slots:
 	void _init_all();
 	void _init_geometry();
 	void _init_windowing();
+	void _set_mode();
 	void load_images(int z, int x, int y, int a, int b);
 	void z_line_moved(int which);
 	void x_line_moved(int which);
 	void y_line_moved(int which);
 	void update_dvr_slices();
 	void toggle_skipping_label();
+	void change_function_label();
+	void change_function_mode_0();
+	void change_function_mode_1();
+	void function_start(int slice_type);
+	void function_end(int slice_type);
+	void update_coord(int slice_type, float x, float y, float z, int v);
 
 private:
 	MainWindow *main_window;
 	SliceWidget *slice_widget_z, *slice_widget_x, *slice_widget_y;
 	DVRWidget *dvr_widget;
 	DataCube *data_cube;
-	QLabel *create_label(QWidget *sw);
-	QLabel *selected, *coord_z, *coord_x, *coord_y, *window_z, *window_x, *window_y, *window_dvr, *coord_dvr, *skipping_label;
+	QLabel *create_label(QWidget *sw, int loc_w, int loc_h);
+	QLabel *coord_z, *coord_x, *coord_y;
+	QLabel *selected, *window_dvr;
+	QLabel *skipping_label, *function_label_z, *function_label_x, *function_label_y;
 	QPushButton *initBtn, *hideBtn, *toggleLineBtn, *toggleBorderBtn;
 	MainWindow *mainWindow;
 	QTreeView *tree;
 	QFileSystemModel *model;
 	QModelIndex *currIdx;
 	QList<QString> file_list;
-	int view_size;
+	int view_size_w, view_size_h;
 	float slice_thickness;
 	QHBoxLayout *create_menubar();
 	void add_menubar_button(QHBoxLayout *m_layout, QMenu *m, QString icon_path);
@@ -75,6 +84,7 @@ private:
 	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
 	int *data_3d, *mask_3d;
 	bool skipping_mode;
+	int function_mode, function_started;
 };
 
 #endif

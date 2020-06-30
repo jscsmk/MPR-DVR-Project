@@ -135,12 +135,13 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 		temp = start;
 
 		for (int j = 0; j < slice_pixel_num * 7 / 4; j++) {
-			int interpolated_data, mask_x, mask_y, mask_z;
-			tie(interpolated_data, mask_x, mask_y, mask_z) = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
+			int interpolated_data, cn_x, cn_y, cn_z;
+			interpolated_data = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
+			tie(cn_x, cn_y, cn_z) = closest_neighbor(temp.x(), temp.y(), temp.z());
 			slice_data[slice_pixel_num*i * 7 / 4 + j] = interpolated_data;
 
 			for (int m = 0; m < N_mask; m++) {
-				mask_data[N_mask*(slice_pixel_num*i * 7 / 4 + j) + m] = mask_x > 0 ? mask_3d[N_mask*(N_x*N_y*mask_z + N_x * mask_y + mask_x) + m] : 0;
+				mask_data[N_mask*(slice_pixel_num*i * 7 / 4 + j) + m] = cn_x > 0 ? mask_3d[N_mask*(N_x*N_y*cn_z + N_x * cn_y + cn_x) + m] : 0;
 			}
 			temp = temp + w;
 		}
@@ -194,7 +195,7 @@ tuple<int, int, float> DataCube::get_line_info(int slice_type)
 	return {line_x, line_y, line_angle};
 }
 
-tuple<int, int, int, int> DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
+int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)
 {
 	z /= slice_thickness;
 
@@ -209,22 +210,22 @@ tuple<int, int, int, int> DataCube::trilinear_interpolation(int slice_type, floa
 		draw_border = x_border_visible;
 		pl = pixel_len_x;
 	}
-	else if (slice_type == 2) {
+	else {
 		draw_border = y_border_visible;
 		pl = pixel_len_y;
 	}
 
-	if (x < -2*pl || y < -2*pl || z < -2*pl || x >= N_x - 1 + 2*pl || y >= N_y - 1 + 2*pl || z >= N_z - 1 + 2*pl) {
+	if (x < -2*pl || y < -2*pl || z < -2*pl / slice_thickness || x >= N_x - 1 + 2*pl || y >= N_y - 1 + 2*pl || z >= N_z - 1 + 2*pl/slice_thickness ) {
 		// if out of range, return min val
-		return { pixel_min, -1, -1, -1 };
+		return pixel_min;
 	}
 
 	if (x < 0 || y < 0 || z < 0 || x >= N_x - 1 || y >= N_y - 1 || z >= N_z - 1) {
 		// if border, return -1
 		if (draw_border == 1)
-			return { pixel_min - 1, -1, -1, -1 };
+			return pixel_min - 1;
 
-		return { pixel_min, -1, -1, -1 };
+		return pixel_min;
 	}
 
 	int fA, fB, fC, fD, fE, fF, fG, fH;
@@ -267,23 +268,22 @@ tuple<int, int, int, int> DataCube::trilinear_interpolation(int slice_type, floa
 	b = 1 - a;
 	fP = b*fR + a*fS;
 
-	// get nearest neighbor mask data
-	int x_nn = x - x_floor < x_ceil - x ? x_floor : x_ceil;
-	int y_nn = y - y_floor < y_ceil - y ? y_floor : y_ceil;
-	int z_nn = z - z_floor < z_ceil - z ? z_floor : z_ceil;
-
-	return { (int)fP, x_nn, y_nn, z_nn };
+	return (int)fP;
 }
 
 tuple<int, int, int> DataCube::closest_neighbor(float x, float y, float z)
 {
+	z /= slice_thickness;
+	if (x < 0 || y < 0 || z < 0 || x >= N_x - 1 || y >= N_y - 1 || z >= N_z - 1)
+		return { -1, -1, -1 };
+
 	return { floor(x + 0.5), floor(y + 0.5), floor(z + 0.5) };
 }
 
-tuple<int, int, int, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
+tuple<float, float, float, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
 {
 	QVector3D point;
-	int cn_x, cn_y, cn_z, pixel_v, mask_x, mask_y, mask_z;
+	int pixel_v;
 
 	if (slice_type == 0) // z slice
 		point = qz + pixel_len_z * (m_x * wz + m_y * hz);
@@ -292,10 +292,8 @@ tuple<int, int, int, int> DataCube::get_coord(int slice_type, int m_x, int m_y)
 	else // y slice
 		point = qy + pixel_len_y * (m_x * wy + m_y * hy);
 
-	tie(cn_x, cn_y, cn_z) = closest_neighbor(point.x(), point.y(), point.z());
-	tie(pixel_v, mask_x, mask_y, mask_z) = trilinear_interpolation(-1, cn_x, cn_y, cn_z);
-
-	return {cn_x, cn_y, cn_z / slice_thickness, pixel_v};
+	pixel_v = trilinear_interpolation(slice_type, point.x(), point.y(), point.z());
+	return { point.x(), point.y(), point.z(), pixel_v};
 }
 
 int DataCube::move_slice(int from, int target, float distance)
@@ -406,104 +404,6 @@ int DataCube::rotate_slice(int slice_type, float a)
 	return 1;
 }
 
-/*
-	// build rotation matrix
-	float w_x, w_y, w_z, sa, ca;
-	sa = sin(a);
-	ca = cos(a);
-
-	if (slice_type == 0) {
-		w_x = -(nz.x());
-		w_y = -(nz.y());
-		w_z = -(nz.z());
-	}
-	else if (slice_type == 1) {
-		w_x = nx.x();
-		w_y = nx.y();
-		w_z = nx.z();
-	}
-	else {
-		w_x = ny.x();
-		w_y = ny.y();
-		w_z = ny.z();
-	}
-
-	float R_mat[9] = { w_x*w_x*(1-ca) + ca,			w_x*w_y*(1-ca) + w_z*sa,		w_x*w_z*(1-ca) - w_y*sa,
-						w_y*w_x*(1-ca) - w_z*sa,		w_y*w_y*(1-ca) + ca,			w_y*w_z*(1-ca) + w_x*sa,
-						w_z*w_x*(1-ca) + w_y*sa,		w_z*w_y*(1-ca) - w_x*sa,		w_z*w_z*(1-ca) + ca
-	};
-
-	// apply rotation matrix
-	if (slice_type == 0) {
-		qx = qx - P_axis;
-		nx = apply_rotation_mat(R_mat, nx.x(), nx.y(), nx.z());
-		wx = apply_rotation_mat(R_mat, wx.x(), wx.y(), wx.z());
-		hx = apply_rotation_mat(R_mat, hx.x(), hx.y(), hx.z());
-		qx = apply_rotation_mat(R_mat, qx.x(), qx.y(), qx.z());
-		qx = qx + P_axis;
-
-		qy = qy - P_axis;
-		ny = apply_rotation_mat(R_mat, ny.x(), ny.y(), ny.z());
-		wy = apply_rotation_mat(R_mat, wy.x(), wy.y(), wy.z());
-		hy = apply_rotation_mat(R_mat, hy.x(), hy.y(), hy.z());
-		qy = apply_rotation_mat(R_mat, qy.x(), qy.y(), qy.z());
-		qy = qy + P_axis;
-
-		r_z += a;
-		if (r_z >= 2 * PI)
-			r_z -= 2 * PI;
-		else if (r_z < 0)
-			r_z += 2 * PI;
-	}
-	else if (slice_type == 1) {
-		qz = qz - P_axis;
-		nz = apply_rotation_mat(R_mat, nz.x(), nz.y(), nz.z());
-		wz = apply_rotation_mat(R_mat, wz.x(), wz.y(), wz.z());
-		hz = apply_rotation_mat(R_mat, hz.x(), hz.y(), hz.z());
-		qz = apply_rotation_mat(R_mat, qz.x(), qz.y(), qz.z());
-		qz = qz + P_axis;
-
-		qy = qy - P_axis;
-		ny = apply_rotation_mat(R_mat, ny.x(), ny.y(), ny.z());
-		wy = apply_rotation_mat(R_mat, wy.x(), wy.y(), wy.z());
-		hy = apply_rotation_mat(R_mat, hy.x(), hy.y(), hy.z());
-		qy = apply_rotation_mat(R_mat, qy.x(), qy.y(), qy.z());
-		qy = qy + P_axis;
-
-		r_x += a;
-		if (r_x >= 2 * PI)
-			r_x -= 2 * PI;
-		else if (r_x < 0)
-			r_x += 2 * PI;
-	}
-	else {
-		qx = qx - P_axis;
-		nx = apply_rotation_mat(R_mat, nx.x(), nx.y(), nx.z());
-		wx = apply_rotation_mat(R_mat, wx.x(), wx.y(), wx.z());
-		hx = apply_rotation_mat(R_mat, hx.x(), hx.y(), hx.z());
-		qx = apply_rotation_mat(R_mat, qx.x(), qx.y(), qx.z());
-		qx = qx + P_axis;
-
-		qz = qz - P_axis;
-		nz = apply_rotation_mat(R_mat, nz.x(), nz.y(), nz.z());
-		wz = apply_rotation_mat(R_mat, wz.x(), wz.y(), wz.z());
-		hz = apply_rotation_mat(R_mat, hz.x(), hz.y(), hz.z());
-		qz = apply_rotation_mat(R_mat, qz.x(), qz.y(), qz.z());
-		qz = qz + P_axis;
-
-		r_y += a;
-		if (r_y >= 2 * PI)
-			r_y -= 2 * PI;
-		else if (r_y < 0)
-			r_y += 2 * PI;
-	}
-
-QVector3D DataCube::apply_rotation_mat(float R[], float x, float y, float z)
-{
-	return QVector3D(R[0] * x + R[1] * y + R[2] * z, R[3] * x + R[4] * y + R[5] * z, R[6] * x + R[7] * y + R[8] * z);
-}
-*/
-
 int DataCube::move_center(int slice_type, float dx, float dy)
 {
 	QVector3D d, new_p;
@@ -575,238 +475,3 @@ tuple<QVector3D, QVector3D, QVector3D, QVector3D, float, QVector3D, QVector3D, Q
 {
 	return { qz, nz, wz, hz, L_z, qx, nx, wx, hx, L_x, qy, ny, wy, hy, L_y };
 }
-
-
-/*
-int* DataCube::get_DVR_screen()
-{
-	int* screen = (int*)malloc(dvr_pixel_num * dvr_pixel_num * sizeof(int));
-	QVector3D center, start, temp;
-
-	center = QVector3D(N_x / 2, N_y / 2, N_z / 2);
-	start = (P_cam - center) * (d1 + d2) / (d1 + d2 + d3) + center - (ws + hs) * pixel_len_s * dvr_pixel_num / 2;
-	start = start - (dvr_start_x * ws + dvr_start_y * hs) * pixel_len_s;
-
-	for (int i = 0; i < dvr_pixel_num; i++) {
-		temp = start;
-
-		for (int j = 0; j < dvr_pixel_num; j++) {
-			screen[dvr_pixel_num*i + j] = ray_casting(temp.x(), temp.y(), temp.z());
-			temp = temp + ws * pixel_len_s;
-		}
-		start = start + hs * pixel_len_s;
-	}
-
-	return screen;
-}
-
-int DataCube::ray_casting(float x, float y, float z)
-{
-	int max_val = 0;
-	float temp_len;
-	QVector3D ray, cur;
-
-	ray = QVector3D(x, y, z) - P_cam;
-	temp_len = ray.length();
-	ray = ray / temp_len;
-	ray = ray * ray_len;
-	cur = ray_penetrating_point(ray);
-
-	while (1)
-	{
-		if (cur.x() < 0 || cur.y() < 0 || cur.z() < 0 ||
-			cur.x() > N_x || cur.y() > N_y || cur.z() > N_z)
-			break;
-
-		int interpolated_value = trilinear_interpolation(-1, cur.x(), cur.y(), cur.z());
-		if (max_val < interpolated_value)
-			max_val = interpolated_value;
-
-		cur = cur + ray;
-	}
-
-	return max_val;
-}
-
-QVector3D DataCube::ray_penetrating_point(QVector3D r)
-{
-	QVector3D shortest, temp;
-	int found = 0;
-	float a, b, c, x, y, z;
-	a = r.x();
-	b = r.y();
-	c = r.z();
-
-	if (a != 0) {
-		x = 0;
-		y = P_cam.y() + (x - P_cam.x()) * b / a;
-		z = P_cam.z() + (x - P_cam.x()) * c / a;
-		if (0 <= y && y <= N_y - 1 && 0 <= z && z <= N_z - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-
-		x = N_x - 1;
-		y = P_cam.y() + (x - P_cam.x()) * b / a;
-		z = P_cam.z() + (x - P_cam.x()) * c / a;
-		if (0 <= y && y <= N_y - 1 && 0 <= z && z <= N_z - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-	}
-
-	if (b != 0) {
-		y = 0;
-		x = P_cam.x() + (y - P_cam.y()) * a / b;
-		z = P_cam.z() + (y - P_cam.y()) * c / b;
-		if (0 <= x && x <= N_x - 1 && 0 <= z && z <= N_z - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-
-		y = N_y - 1;
-		x = P_cam.x() + (y - P_cam.y()) * a / b;
-		z = P_cam.z() + (y - P_cam.y()) * c / b;
-		if (0 <= x && x <= N_x - 1 && 0 <= z && z <= N_z - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-	}
-
-	if (c != 0) {
-		z = 0;
-		x = P_cam.x() + (z - P_cam.z()) * a / c;
-		y = P_cam.y() + (z - P_cam.z()) * b / c;
-		if (0 <= x && x <= N_x - 1 && 0 <= y && y <= N_y - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-
-		z = N_z - 1;
-		x = P_cam.x() + (z - P_cam.z()) * a / c;
-		y = P_cam.y() + (z - P_cam.z()) * b / c;
-		if (0 <= x && x <= N_x - 1 && 0 <= y && y <= N_y - 1) {
-			temp = QVector3D(x, y, z) - P_cam;
-			if (found == 0 || shortest.length() > temp.length()) {
-				found = 1;
-				shortest = temp;
-			}
-		}
-	}
-
-	return shortest + P_cam;
-}
-
-int DataCube::rotate_DVR_screen(float dx, float dy)
-{
-	QMatrix4x4 m_rotate;
-	m_rotate.setToIdentity();
-	m_rotate.rotate(dx * 1800 / (PI * d1), -hs);
-	m_rotate.rotate(dy * 1800 / (PI * d1), ws);
-
-	QVector4D new_c, new_w, new_h, new_n;
-	P_cam = (m_trans_center_inverse * m_rotate * m_trans_center * QVector4D(P_cam, 1)).toVector3D();
-	ws = (m_rotate * QVector4D(ws, 1)).toVector3D();
-	hs = (m_rotate * QVector4D(hs, 1)).toVector3D();
-	ns = (m_rotate * QVector4D(ns, 1)).toVector3D();
-
-	return 1;
-}
-
-int DataCube::panning_DVR_screen(float dx, float dy)
-{
-	// TODO: add limits?
-	dvr_start_x += dx;
-	dvr_start_y += dy;
-	//qy = qy + pixel_len_y * (dx * wy + dy * hy);
-	return 1;
-}
-
-int DataCube::zoom_DVR_screen(float d)
-{
-	if (L_z + d < N_max / 10 || 5 * N_max < L_z + d)
-		return 0;
-
-	L_s += d;
-	pixel_len_s = L_s / (dvr_pixel_num - 1);
-	//qz = qz - (wz + hz) * d / 2;
-
-	return 1;
-}
-
-void DataCube::get_DVR_screen_GPU()
-{
-	int m_count = 0;
-	QVector3D center, start, temp;
-	QVector3D t1, t2, t3, t4;
-	m_data.resize(dvr_pixel_num * dvr_pixel_num * 3 * 6);
-	center = QVector3D(N_x / 2, N_y / 2, N_z / 2);
-	start = (P_cam - center) * (d1 + d2) / (d1 + d2 + d3) + center - (ws + hs) * pixel_len_s * dvr_pixel_num / 2;
-	start = start - (dvr_start_x * ws + dvr_start_y * hs) * pixel_len_s;
-
-	for (int i = 0; i < dvr_pixel_num; i++) {
-		temp = start;
-
-		for (int j = 0; j < dvr_pixel_num; j++) {
-			//screen[dvr_pixel_num*i + j] = ray_casting(temp.x(), temp.y(), temp.z());
-
-			t1 = temp;
-			t2 = temp + ws * pixel_len_s;
-			t3 = temp + hs * pixel_len_s;
-			t4 = t2 + hs * pixel_len_s;
-
-			GLfloat *p = m_data.data() + m_count;
-			//*p++ = temp.x();
-			//*p++ = temp.y();
-			//*p++ = temp.z();
-			//*p++ = ns.x();
-			//*p++ = ns.y();
-			//*p++ = ns.z();
-			//*p++ = 0.0;
-			//*p++ = 1.0;
-			//*p++ = 0.0;
-
-			*p++ = t1.x();
-			*p++ = t1.y();
-			*p++ = t1.z();
-			*p++ = t2.x();
-			*p++ = t2.y();
-			*p++ = t2.z();
-			*p++ = t3.x();
-			*p++ = t3.y();
-			*p++ = t3.z();
-
-			*p++ = t4.x();
-			*p++ = t4.y();
-			*p++ = t4.z();
-			*p++ = t3.x();
-			*p++ = t3.y();
-			*p++ = t3.z();
-			*p++ = t2.x();
-			*p++ = t2.y();
-			*p++ = t2.z();
-
-			m_count += 3 * 6;
-
-			temp = temp + ws * pixel_len_s;
-		}
-		start = start + hs * pixel_len_s;
-	}
-}
-*/
-

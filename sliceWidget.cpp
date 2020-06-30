@@ -17,7 +17,7 @@ using namespace std;
 SliceWidget::SliceWidget(int t, int s)
 {
 	slice_type = t;
-	is_valid = 0;
+	mode = -1;
 	is_line_visible = 1;
 	slice_size = s;
 
@@ -41,7 +41,7 @@ SliceWidget::SliceWidget(int t, int s)
 
 void SliceWidget::set_data(DataCube *d)
 {
-	is_valid = 1;
+	mode = 0;
 	data_cube = d;
 	tie(pixel_num, rescale_slope, rescale_intercept, pixel_min, pixel_max, mask_count) = data_cube->get_pixel_info();
 	slice_data = (int*)malloc(pixel_num * pixel_num * sizeof(int) * 7 / 4);
@@ -51,7 +51,21 @@ void SliceWidget::set_data(DataCube *d)
 	window_width = 350;
 	window_changed = 0;
 
+	line_clicked_h = 0;
+	line_clicked_v = 0;
+	is_line_mouseover_h = 0;
+	is_line_mouseover_v = 0;
+
 	get_slice();
+}
+
+void SliceWidget::set_mode(int m)
+{
+	mode = m;
+	line_clicked_h = 0;
+	line_clicked_v = 0;
+	is_line_mouseover_h = 0;
+	is_line_mouseover_v = 0;
 }
 
 void SliceWidget::get_slice()
@@ -141,7 +155,7 @@ void SliceWidget::toggle_border_line()
 void SliceWidget::set_pixmap()
 {
 
-	if (is_valid == 0) {
+	if (mode < 0) {
 		// set blank img when not valid
 		//img_buffer = blank_img;
 		//*img_buffer = img_buffer->scaledToHeight(slice_size);
@@ -236,26 +250,21 @@ void SliceWidget::set_pixmap()
 	//free(img_buffer);
 }
 
-void SliceWidget::emit_coord_sig(int is_inside, int mouse_x, int mouse_y)
+void SliceWidget::emit_coord_sig(int mouse_x, int mouse_y)
 {
-	if (is_inside == 0) {
-		emit coord_info_sig("");
-		return;
-	}
-
-	int point_x, point_y, point_z, pixel_v, angle_deg;
+	int pixel_v, angle_deg;
+	float coord_x, coord_y, coord_z;
 	int m_x = mouse_x * pixel_num / slice_size;
 	int m_y = mouse_y * pixel_num / slice_size;
 
-	tie(point_x, point_y, point_z, pixel_v) = data_cube->get_coord(slice_type, m_x, m_y);
+	tie(coord_x, coord_y, coord_z, pixel_v) = data_cube->get_coord(slice_type, m_x, m_y);
 	pixel_v = rescale_slope * pixel_v + rescale_intercept;
-	QString msg = "Coord: (" + QString::number(point_x) + ", " + QString::number(point_y) + ", " + QString::number(point_z) + ")\nIntensity(HU): " + QString::number(pixel_v);
-	emit coord_info_sig(msg);
+	emit coord_info_sig(slice_type, coord_x, coord_y, coord_z, pixel_v);
 }
 
 void SliceWidget::leaveEvent(QEvent *event)
 {
-	if (is_valid == 0)
+	if (mode < 0)
 		return;
 
 	line_clicked_h = 0;
@@ -264,25 +273,35 @@ void SliceWidget::leaveEvent(QEvent *event)
 	is_line_mouseover_v = 0;
 
 	set_pixmap();
-	emit emit_coord_sig(0, 0, 0);
 }
 
 void SliceWidget::mousePressEvent(QMouseEvent *event)
 {
-	if (is_valid == 0)
+	if (mode < 0)
 		return;
+
+	if (mode > 0) {
+		emit mouse_press_sig(slice_type);
+		emit_coord_sig(event->x(), event->y());
+	}
 
 	mouse_last_x = event->x();
 	mouse_last_y = event->y();
 	mouse_last_a = get_mouse_angle(event->x(), event->y());
-	line_clicked_h = is_line_mouseover_h;
-	line_clicked_v = is_line_mouseover_v;
+
+	if (mode == 0) {
+		line_clicked_h = is_line_mouseover_h;
+		line_clicked_v = is_line_mouseover_v;
+	}
 }
 
 void SliceWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-	if (is_valid == 0)
+	if (mode < 0)
 		return;
+
+	if (mode > 0)
+		emit mouse_release_sig(slice_type);
 
 	line_clicked_h = 0;
 	line_clicked_v = 0;
@@ -295,7 +314,7 @@ void SliceWidget::mouseReleaseEvent(QMouseEvent *event)
 
 void SliceWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-	if (is_valid == 0)
+	if (mode != 0)
 		return;
 
 	float dx = (float)(event->x() - line_x_scaled);
@@ -307,13 +326,13 @@ void SliceWidget::mouseDoubleClickEvent(QMouseEvent *event)
 	if (moved == 1) {
 		get_slice();
 		emit line_moved_sig(2);
-		emit_coord_sig(1, event->x(), event->y());
+		emit_coord_sig(event->x(), event->y());
 	}
 }
 
 void SliceWidget::wheelEvent(QWheelEvent *event)
 {
-	if (is_valid == 0)
+	if (mode != 0)
 		return;
 
 	QPoint wd = event->angleDelta();
@@ -330,14 +349,14 @@ void SliceWidget::wheelEvent(QWheelEvent *event)
 
 	get_slice();
 	emit line_moved_sig(3);
-	emit_coord_sig(1, event->x(), event->y());
+	emit_coord_sig(event->x(), event->y());
 }
 
 void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 {
 	// TODO: thickening the slice -> avg/max/min
 
-	if (is_valid == 0)
+	if (mode < 0)
 		return;
 
 	// send coord info
@@ -367,23 +386,25 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 	// check if mouse is on the line
 	int line_mouseover_v, line_mouseover_h;
 	float r_mouse;
-	line_mouseover_h = 0;
-	line_mouseover_v = 0;
-	r_mouse = sqrt(pow(line_x_scaled - mouse_x, 2) + pow(line_y_scaled - mouse_y, 2));
-	if (angle_diff_h * r_mouse <= 4)
-		line_mouseover_h = 1;
-	if (angle_diff_v * r_mouse <= 4)
-		line_mouseover_v = 1;
+	if (mode == 0) {
+		line_mouseover_h = 0;
+		line_mouseover_v = 0;
+		r_mouse = sqrt(pow(line_x_scaled - mouse_x, 2) + pow(line_y_scaled - mouse_y, 2));
+		if (angle_diff_h * r_mouse <= 4)
+			line_mouseover_h = 1;
+		if (angle_diff_v * r_mouse <= 4)
+			line_mouseover_v = 1;
 
-	// if mouseover changed, change line thickness
-	if (line_mouseover_v != is_line_mouseover_v || line_mouseover_h != is_line_mouseover_h) {
-		is_line_mouseover_v = line_mouseover_v;
-		is_line_mouseover_h = line_mouseover_h;
-		set_pixmap();
+		// if mouseover changed, change line thickness
+		if (line_mouseover_v != is_line_mouseover_v || line_mouseover_h != is_line_mouseover_h) {
+			is_line_mouseover_v = line_mouseover_v;
+			is_line_mouseover_h = line_mouseover_h;
+			set_pixmap();
+		}
 	}
 
 	// mouse click event
-	if (event->buttons() & Qt::LeftButton) // when left clicked
+	if (event->buttons() & Qt::LeftButton && mode == 0) // when left clicked
 	{
 		if (is_line_visible == 1 && (line_clicked_h + line_clicked_v) > 0) { // when clicked line
 			float dx = (float)(mouse_x - mouse_last_x);
@@ -434,7 +455,7 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		}
 	}
 	else if (event->buttons() & Qt::RightButton) { // when right clicked
-		if (is_line_visible == 1 && (line_clicked_h + line_clicked_v) > 0) { // when clicked line = rotation
+		if (is_line_visible == 1 && (line_clicked_h + line_clicked_v) > 0 && mode == 0) { // when clicked line = rotation
 			// TODO(maybe): change rotation event to something other than right-clicking line
 			// get rotated angle, and check if rotated clockwise or counter-clockwise
 			float angle_diff, angle_temp;
@@ -500,7 +521,7 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		}
 	}
 
-	emit_coord_sig(1, mouse_x, mouse_y);
+	emit_coord_sig(mouse_x, mouse_y);
 }
 
 float SliceWidget::get_mouse_angle(int mouse_x, int mouse_y)
