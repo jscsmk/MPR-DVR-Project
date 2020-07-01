@@ -36,7 +36,7 @@
 #include "sliceWidget.h"
 
 
-using namespace cgip;
+//TOGO_CGIP: using namespace cgip;
 
 Window::Window(MainWindow *mw)
 	: main_window(mw)
@@ -99,7 +99,9 @@ Window::Window(MainWindow *mw)
 	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
 	QAction *function_select_0_z, *function_select_0_x, *function_select_0_y;
 	QAction *function_select_1_z, *function_select_1_x, *function_select_1_y;
-	// add actions for functions here
+	QAction *function_select_2_z, *function_select_2_x, *function_select_2_y;
+	QAction *function_select_3_z, *function_select_3_x, *function_select_3_y;
+	QAction *function_select_4_z, *function_select_4_x, *function_select_4_y;
 	QAction *init_all, *init_geometry, *init_windowing;
 
 	QMenu *toggle_menu_dvr, *init_menu_dvr;
@@ -124,12 +126,23 @@ Window::Window(MainWindow *mw)
 	init_DVR_geometry = new QAction("reset geometry");
 	init_DVR_windowing = new QAction("reset window level and width");
 
-	function_select_0_z = new QAction("off");
-	function_select_0_x = new QAction("off");
-	function_select_0_y = new QAction("off");
-	function_select_1_z = new QAction("function 1");
-	function_select_1_x = new QAction("function 1");
-	function_select_1_y = new QAction("function 1");
+	//TODO_CGIP: specify function names
+	function_list = { "off", "function 1", "function 2", "function 3", "function 4" };
+	function_select_0_z = new QAction(function_list[0]);
+	function_select_0_x = new QAction(function_list[0]);
+	function_select_0_y = new QAction(function_list[0]);
+	function_select_1_z = new QAction(function_list[1]);
+	function_select_1_x = new QAction(function_list[1]);
+	function_select_1_y = new QAction(function_list[1]);
+	function_select_2_z = new QAction(function_list[2]);
+	function_select_2_x = new QAction(function_list[2]);
+	function_select_2_y = new QAction(function_list[2]);
+	function_select_3_z = new QAction(function_list[3]);
+	function_select_3_x = new QAction(function_list[3]);
+	function_select_3_y = new QAction(function_list[3]);
+	function_select_4_z = new QAction(function_list[4]);
+	function_select_4_x = new QAction(function_list[4]);
+	function_select_4_y = new QAction(function_list[4]);
 
 	toggle_menu_z = new QMenu();
 	toggle_menu_x = new QMenu();
@@ -159,10 +172,19 @@ Window::Window(MainWindow *mw)
 	function_select_menu_y = new QMenu();
 	function_select_menu_z->addAction(function_select_0_z);
 	function_select_menu_z->addAction(function_select_1_z);
+	function_select_menu_z->addAction(function_select_2_z);
+	function_select_menu_z->addAction(function_select_3_z);
+	function_select_menu_z->addAction(function_select_4_z);
 	function_select_menu_x->addAction(function_select_0_x);
 	function_select_menu_x->addAction(function_select_1_x);
+	function_select_menu_x->addAction(function_select_2_x);
+	function_select_menu_x->addAction(function_select_3_x);
+	function_select_menu_x->addAction(function_select_4_x);
 	function_select_menu_y->addAction(function_select_0_y);
 	function_select_menu_y->addAction(function_select_1_y);
+	function_select_menu_y->addAction(function_select_2_y);
+	function_select_menu_y->addAction(function_select_3_y);
+	function_select_menu_y->addAction(function_select_4_y);
 
 	toggle_menu_dvr = new QMenu();
 	init_menu_dvr = new QMenu();
@@ -228,9 +250,9 @@ Window::Window(MainWindow *mw)
 	selected->setAlignment(Qt::AlignLeft);;
 
 	QLabel *window_z, *window_x, *window_y;
-	coord_z = create_label(slice_widget_z, view_size_w - 250, view_size_h - 40);
-	coord_x = create_label(slice_widget_x, view_size_w - 250, view_size_h - 40);
-	coord_y = create_label(slice_widget_y, view_size_w - 250, view_size_h - 40);
+	coord_z = create_label(slice_widget_z, view_size_w - 210, view_size_h - 40);
+	coord_x = create_label(slice_widget_x, view_size_w - 210, view_size_h - 40);
+	coord_y = create_label(slice_widget_y, view_size_w - 210, view_size_h - 40);
 	window_z = create_label(slice_widget_z, 10, view_size_h - 40);
 	window_x = create_label(slice_widget_x, 10, view_size_h - 40);
 	window_y = create_label(slice_widget_y, 10, view_size_h - 40);
@@ -260,16 +282,25 @@ Window::Window(MainWindow *mw)
 	connect(function_select_1_z, &QAction::triggered, this, &Window::change_function_mode_1);
 	connect(function_select_1_x, &QAction::triggered, this, &Window::change_function_mode_1);
 	connect(function_select_1_y, &QAction::triggered, this, &Window::change_function_mode_1);
+	connect(function_select_2_z, &QAction::triggered, this, &Window::change_function_mode_2);
+	connect(function_select_2_x, &QAction::triggered, this, &Window::change_function_mode_2);
+	connect(function_select_2_y, &QAction::triggered, this, &Window::change_function_mode_2);
+	connect(function_select_3_z, &QAction::triggered, this, &Window::change_function_mode_3);
+	connect(function_select_3_x, &QAction::triggered, this, &Window::change_function_mode_3);
+	connect(function_select_3_y, &QAction::triggered, this, &Window::change_function_mode_3);
+	connect(function_select_4_z, &QAction::triggered, this, &Window::change_function_mode_4);
+	connect(function_select_4_x, &QAction::triggered, this, &Window::change_function_mode_4);
+	connect(function_select_4_y, &QAction::triggered, this, &Window::change_function_mode_4);
 
 	connect(slice_widget_z, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
 	connect(slice_widget_x, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
 	connect(slice_widget_y, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
-	connect(slice_widget_z, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
-	connect(slice_widget_x, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
-	connect(slice_widget_y, SIGNAL(mouse_press_sig(int, float, float, float)), this, SLOT(function_start(int, float, float, float)));
-	connect(slice_widget_z, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
-	connect(slice_widget_x, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
-	connect(slice_widget_y, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(function_end(int, float, float, float)));
+	connect(slice_widget_z, SIGNAL(mouse_press_sig(int, float, float, float, int)), this, SLOT(mouse_pressed(int, float, float, float, int)));
+	connect(slice_widget_x, SIGNAL(mouse_press_sig(int, float, float, float, int)), this, SLOT(mouse_pressed(int, float, float, float, int)));
+	connect(slice_widget_y, SIGNAL(mouse_press_sig(int, float, float, float, int)), this, SLOT(mouse_pressed(int, float, float, float, int)));
+	connect(slice_widget_z, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
+	connect(slice_widget_x, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
+	connect(slice_widget_y, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
 
 	connect(slice_widget_z, SIGNAL(windowing_info_sig(QString)), window_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(windowing_info_sig(QString)), window_x, SLOT(setText(QString)));
@@ -399,6 +430,30 @@ void Window::change_function_mode_1()
 {
 	if (function_mode != 1)	{
 		function_mode = 1;
+		change_function_label();
+		_set_mode();
+	}
+}
+void Window::change_function_mode_2()
+{
+	if (function_mode != 2) {
+		function_mode = 2;
+		change_function_label();
+		_set_mode();
+	}
+}
+void Window::change_function_mode_3()
+{
+	if (function_mode != 3) {
+		function_mode = 3;
+		change_function_label();
+		_set_mode();
+	}
+}
+void Window::change_function_mode_4()
+{
+	if (function_mode != 4) {
+		function_mode = 4;
 		change_function_label();
 		_set_mode();
 	}
@@ -590,14 +645,17 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
 
+	/*
+	TODO_CGIP: add class objects here
+
 	cgip_volume = new CgipVolume(x, y, z, data_3d);
 	cgip_mask = new CgipMask(x, y, z, mask_3d);
 	cgip_volume->setSpacingX(1);
 	cgip_volume->setSpacingY(1);
 	cgip_volume->setSpacingZ(slice_thickness);
 
-	// TODO_CGIP: add class objects here
-	// ex) cgip_magic_brush = new CgipMagicBrush(50, 1, cgip_volume, cgip_mask);
+	cgip_magic_brush = new CgipMagicBrush(50, 1, cgip_volume, cgip_mask);
+	*/
 
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
 	data_cube->set_mask(mask_3d, mask_count);
@@ -644,7 +702,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 QLabel *Window::create_label(QWidget *sw, int loc_w, int loc_h)
 {
 	QLabel *label = new QLabel;
-	label->setFixedSize(180, 30);
+	label->setFixedSize(250, 30);
 	label->setParent(sw);
 	label->move(loc_w, loc_h);
 
@@ -739,7 +797,12 @@ void Window::y_line_moved(int which)
 
 	update_dvr_slices();
 }
-
+void Window::update_all_slice()
+{
+	slice_widget_z->get_slice();
+	slice_widget_x->get_slice();
+	slice_widget_y->get_slice();
+}
 void Window::update_dvr_slices()
 {
 	if (dvr_widget)
@@ -757,12 +820,9 @@ void Window::toggle_skipping_label()
 void Window::change_function_label()
 {
 	QString mode_text = "current function: ";
-	if (function_mode == 0)
-		mode_text += "OFF";
-	else {
-		mode_text += QString::number(function_mode) + " - ";
-		mode_text += function_started ? "start" : "end";
-	}
+	mode_text += function_list[function_mode];
+	if (function_mode != 0)
+		mode_text += function_started ? " - started" : " - terminated";
 
 	function_label_z->setText(mode_text);
 	function_label_x->setText(mode_text);
@@ -783,10 +843,7 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 	msg = "Coord: (" + QString::number(x) + ", " + QString::number(y) + ", " + QString::number(z) + ")\nIntensity(HU): " + QString::number(v);
 
 	if (function_started == 1) {
-		CgipPoint cur_point(x, y, z / slice_thickness);
-
-		// TODO_CGIP: add move event here
-		// ex) cgip_magic_brush->moveBrush(cur_point);
+		mouse_moved(slice_type, x, y, z);
 	}
 
 	if (slice_type == 0)
@@ -796,25 +853,54 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 	else
 		coord_y->setText(msg);
 }
-void Window::function_start(int slice_type, float x, float y, float z)
+void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_type)
 {
+	/*
+	TODO_CGIP: add mouse press event here
+	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
+	Tip2: change function_started to 1 when started
+	Tip3: click_type = 1 is left, 2 is right click
+	*/
 	function_started = 1;
-	change_function_label();
-	CgipPoint cur_point(x, y, z / slice_thickness);
+	if (function_mode == 1) {
 
-	// TODO_CGIP: add start event here
-	// ex)cgip_magic_brush->startBrush(cur_point);
+	}
+	else if (function_mode == 2) {
+
+	}
+
+	change_function_label();
 }
-void Window::function_end(int slice_type, float x, float y, float z)
+void Window::mouse_moved(int slice_type, float x, float y, float z)
 {
+	/*
+	TODO_CGIP: add mouse move event here
+	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
+	Tip2: this is called only if function_started == 1
+	*/
+	if (function_mode == 1) {
+
+	}
+	else if (function_mode == 2) {
+
+	}
+}
+void Window::mouse_released(int slice_type, float x, float y, float z)
+{
+	/*
+	TODO_CGIP: add mouse release event here
+	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
+	Tip2: change function_started to 0 when terminated
+	TIP3: to update slices, do "update_all_slice();"
+	*/
 	function_started = 0;
+	if (function_mode == 1) {
+
+	}
+	else if (function_mode == 2) {
+
+	}
+
+	update_all_slice();
 	change_function_label();
-	CgipPoint cur_point(x, y, z / slice_thickness);
-
-	// TODO_CGIP: add end event here
-	// ex) cgip_magic_brush->endBrush(cur_point);
-
-	slice_widget_z->get_slice();
-	slice_widget_x->get_slice();
-	slice_widget_y->get_slice();
 }

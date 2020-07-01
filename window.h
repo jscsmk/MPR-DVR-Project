@@ -54,9 +54,14 @@ private slots:
 	void change_function_label();
 	void change_function_mode_0();
 	void change_function_mode_1();
-	void function_start(int slice_type, float x, float y, float z);
-	void function_end(int slice_type, float x, float y, float z);
+	void change_function_mode_2();
+	void change_function_mode_3();
+	void change_function_mode_4();
+	void update_all_slice();
 	void update_coord(int slice_type, float x, float y, float z, int v);
+	void mouse_pressed(int slice_type, float x, float y, float z, int click_type);
+	void mouse_moved(int slice_type, float x, float y, float z);
+	void mouse_released(int slice_type, float x, float y, float z);
 
 private:
 	MainWindow *main_window;
@@ -87,12 +92,15 @@ private:
 	short *data_3d, *mask_3d;
 	bool skipping_mode;
 	int function_mode, function_started;
+	QList<QString> function_list;
 
+	/*
+	TODO_CGIP: add pointers for class objects of functions
+	ex)
 	cgip::CgipVolume *cgip_volume;
 	cgip::CgipMask *cgip_mask;
-
-	//TODO_CGIP: add pointers for class objects of functions
-	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
+	cgip::CgipMagicBrush *cgip_magic_brush;
+	*/
 };
 
 #endif

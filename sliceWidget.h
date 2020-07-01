@@ -31,7 +31,7 @@ public slots:
 
 signals:
 	void coord_info_sig(int slice_type, float coord_x, float coord_y, float coord_z, int pixel_val);
-	void mouse_press_sig(int slice_type, float coord_x, float coord_y, float coord_z);
+	void mouse_press_sig(int slice_type, float coord_x, float coord_y, float coord_z, int click_type);
 	void mouse_release_sig(int slice_type, float coord_x, float coord_y, float coord_z);
 	void mouse_leave_sig(int slice_type);
 	void windowing_info_sig(QString msg);

@@ -280,7 +280,11 @@ void SliceWidget::mousePressEvent(QMouseEvent *event)
 		int pixel_v;
 		float coord_x, coord_y, coord_z;
 		tie(coord_x, coord_y, coord_z, pixel_v) = convert_coord(event->x(), event->y());
-		emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z);
+
+		if (event->buttons() & Qt::LeftButton)
+			emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z, 1);
+		else if (event->buttons() & Qt::RightButton)
+			emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z, 2);
 	}
 
 	mouse_last_x = event->x();
@@ -405,8 +409,13 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		}
 	}
 
+	emit_coord_sig(mouse_x, mouse_y);
+
 	// mouse click event
-	if (event->buttons() & Qt::LeftButton && mode == 0) // when left clicked
+	if (mode != 0)
+		return;
+
+	if (event->buttons() & Qt::LeftButton) // when left clicked
 	{
 		if (is_line_visible == 1 && (line_clicked_h + line_clicked_v) > 0) { // when clicked line
 			float dx = (float)(mouse_x - mouse_last_x);
@@ -522,8 +531,6 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 			emit zoom_panning_sig();
 		}
 	}
-
-	emit_coord_sig(mouse_x, mouse_y);
 }
 
 float SliceWidget::get_mouse_angle(int mouse_x, int mouse_y)

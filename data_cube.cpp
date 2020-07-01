@@ -487,7 +487,7 @@ tuple<QVector3D, QVector3D, QVector3D, int, int, float> DataCube::get_MPR_info(i
 	if (slice_type == 0)
 		return { qz, wz, hz, slice_pixel_num_w, slice_pixel_num_h, pixel_len_z };
 	if (slice_type == 1)
-		return { qx, wx, hx, slice_pixel_num_w, slice_pixel_num_h, pixel_len_z };
+		return { qx, wx, hx, slice_pixel_num_w, slice_pixel_num_h, pixel_len_x };
 
-	return { qy, wy, hy, slice_pixel_num_w, slice_pixel_num_h, pixel_len_z };
+	return { qy, wy, hy, slice_pixel_num_w, slice_pixel_num_h, pixel_len_y };
 }
