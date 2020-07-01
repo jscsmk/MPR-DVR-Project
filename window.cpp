@@ -580,7 +580,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	free(mask_3d);
 	int mask_count = 1;
 	mask_3d = (short*)malloc(mask_count * z * x * y * sizeof(short));
-	for (int i = 0; i < x*y*z; i++)
+	for (int i = 0; i < mask_count*x*y*z; i++)
 		mask_3d[i] = 0;
 
 	int slice_pixel_num_h = 512;

@@ -137,8 +137,9 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 	w = pl * w;
 	h = pl * h;
 
+#pragma omp parallel for
 	for (int i = 0; i < slice_pixel_num_h; i++) {
-		temp = start;
+		temp = start + h*i;
 
 		for (int j = 0; j < slice_pixel_num_w; j++) {
 			int interpolated_data, cn_x, cn_y, cn_z;
@@ -151,7 +152,6 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 			}
 			temp = temp + w;
 		}
-		start = start + h;
 	}
 }
 

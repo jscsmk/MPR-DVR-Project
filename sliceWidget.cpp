@@ -107,7 +107,8 @@ void SliceWidget::apply_windowing()
 	};
 	float mask_opacity = 0.5;
 
-	for (int i = 0, j = 0; i < pixel_num_w * pixel_num_h; i++) {
+#pragma omp parallel for
+	for (int i = 0; i < pixel_num_w * pixel_num_h; i++) {
 		float temp = (float)(slice_data[i]);
 
 		if (temp < pixel_min) {
@@ -132,7 +133,7 @@ void SliceWidget::apply_windowing()
 					temp = (temp * (1 - mask_opacity) + mask_color_list[3*m + k] * mask_opacity);
 				}
 			}
-			windowed_slice[j++] = (int)temp;
+			windowed_slice[3*i + k] = (int)temp;
 		}
 	}
 
