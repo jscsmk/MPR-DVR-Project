@@ -6,7 +6,13 @@
 #include "data_cube.h"
 #include "sliceWidget.h"
 //TODO_CGIP: add header files here
-//ex) #include "cgip_headers/MagicBrush/CgipMagicBrush.h"
+/*
+#include "cgip_headers/FreeDraw/CgipBrush.h"
+#include "cgip_headers/FreeDraw/CgipFreeDraw.h"
+#include "cgip_headers/FreeDraw/CgipCurve.h"
+#include "cgip_headers/MPRMod/CgipMPRMod.h"
+#include "cgip_headers/Common/CgipVolume.h"
+*/
 
 class QSignalMapper;
 class QLabel;
@@ -44,20 +50,21 @@ private slots:
 	void _init_all();
 	void _init_geometry();
 	void _init_windowing();
-	void _set_mode();
 	void load_images(int z, int x, int y, int a, int b);
 	void z_line_moved(int which);
 	void x_line_moved(int which);
 	void y_line_moved(int which);
 	void update_dvr_slices();
 	void toggle_skipping_label();
-	void change_function_label();
-	void change_function_mode_0();
-	void change_function_mode_1();
-	void change_function_mode_2();
-	void change_function_mode_3();
-	void change_function_mode_4();
+	QString get_function_label(int m);
+	void change_function_mode_z(int m);
+	void change_function_mode_x(int m);
+	void change_function_mode_y(int m);
+	void change_color_z(int c);
+	void change_color_x(int c);
+	void change_color_y(int c);
 	void update_all_slice();
+	tuple<int, int> get_function_status(int slice_type);
 	void update_coord(int slice_type, float x, float y, float z, int v);
 	void mouse_pressed(int slice_type, float x, float y, float z, int click_type);
 	void mouse_moved(int slice_type, float x, float y, float z);
@@ -89,16 +96,20 @@ private:
 	QLabel *blank_dvr;
 	QAction *init_DVR_all, *init_DVR_geometry, *init_DVR_windowing;
 	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
-	short *data_3d, *mask_3d;
+	short *data_3d;
+	short **mask_3d;
+	int mask_count;
 	bool skipping_mode;
-	int function_mode, function_started;
-	QList<QString> function_list;
+	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
+	//TODO_CGIP: specify function names
+	QString function_list[5] = { "off", "free draw", "function 2", "function 3", "function 4" };
+	QString color_list[7] = { "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
+	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
+	//TODO_CGIP: add pointers for class objects of functions
 	/*
-	TODO_CGIP: add pointers for class objects of functions
-	ex)
 	cgip::CgipVolume *cgip_volume;
-	cgip::CgipMask *cgip_mask;
+	cgip::CgipMask **cgip_mask;
 	cgip::CgipMagicBrush *cgip_magic_brush;
 	*/
 };

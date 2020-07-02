@@ -67,8 +67,14 @@ Window::Window(MainWindow *mw)
 	data_3d = NULL;
 	mask_3d = NULL;
 	dvr_widget = NULL;
-	function_mode = 0;
+	function_mode_z = 0;
+	function_mode_x = 0;
+	function_mode_y = 0;
 	function_started = 0;
+	function_color_z = 0;
+	function_color_x = 0;
+	function_color_y = 0;
+	mask_count = 7;
 
 	// add local file browser
 	QString root_path = "c:/vscode_workspace";
@@ -95,15 +101,12 @@ Window::Window(MainWindow *mw)
 	// add menubar for MPR
 	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;
 	QMenu *function_select_menu_z, *function_select_menu_x, *function_select_menu_y;
+	QMenu *color_select_menu_z, *color_select_menu_x, *color_select_menu_y;
 	QAction *toggle_slice_line_z, *toggle_slice_line_x, *toggle_slice_line_y;
 	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
-	QAction *function_select_0_z, *function_select_0_x, *function_select_0_y;
-	QAction *function_select_1_z, *function_select_1_x, *function_select_1_y;
-	QAction *function_select_2_z, *function_select_2_x, *function_select_2_y;
-	QAction *function_select_3_z, *function_select_3_x, *function_select_3_y;
-	QAction *function_select_4_z, *function_select_4_x, *function_select_4_y;
+	QAction *function_select_z[5], *function_select_x[5], *function_select_y[5];
+	QAction *color_select_z[7], *color_select_x[7], *color_select_y[7];
 	QAction *init_all, *init_geometry, *init_windowing;
-
 	QMenu *toggle_menu_dvr, *init_menu_dvr;
 
 	toggle_slice_line_z = new QAction("show/hide slice lines");
@@ -126,23 +129,34 @@ Window::Window(MainWindow *mw)
 	init_DVR_geometry = new QAction("reset geometry");
 	init_DVR_windowing = new QAction("reset window level and width");
 
-	//TODO_CGIP: specify function names
-	function_list = { "off", "function 1", "function 2", "function 3", "function 4" };
-	function_select_0_z = new QAction(function_list[0]);
-	function_select_0_x = new QAction(function_list[0]);
-	function_select_0_y = new QAction(function_list[0]);
-	function_select_1_z = new QAction(function_list[1]);
-	function_select_1_x = new QAction(function_list[1]);
-	function_select_1_y = new QAction(function_list[1]);
-	function_select_2_z = new QAction(function_list[2]);
-	function_select_2_x = new QAction(function_list[2]);
-	function_select_2_y = new QAction(function_list[2]);
-	function_select_3_z = new QAction(function_list[3]);
-	function_select_3_x = new QAction(function_list[3]);
-	function_select_3_y = new QAction(function_list[3]);
-	function_select_4_z = new QAction(function_list[4]);
-	function_select_4_x = new QAction(function_list[4]);
-	function_select_4_y = new QAction(function_list[4]);
+	function_select_menu_z = new QMenu();
+	function_select_menu_x = new QMenu();
+	function_select_menu_y = new QMenu();
+	color_select_menu_z = new QMenu();
+	color_select_menu_x = new QMenu();
+	color_select_menu_y = new QMenu();
+	for (int i = 0; i < 5; i++) {
+		function_select_z[i] = new QAction(function_list[i]);
+		function_select_x[i] = new QAction(function_list[i]);
+		function_select_y[i] = new QAction(function_list[i]);
+
+		function_select_menu_z->addAction(function_select_z[i]);
+		function_select_menu_x->addAction(function_select_x[i]);
+		function_select_menu_y->addAction(function_select_y[i]);
+	}
+	for (int i = 0; i < 7; i++) {
+		color_select_z[i] = new QAction("mask " + QString::number(i + 1));
+		color_select_x[i] = new QAction("mask " + QString::number(i + 1));
+		color_select_y[i] = new QAction("mask " + QString::number(i + 1));
+
+		color_select_z[i]->setIcon(QIcon("icons/" + color_list[i]));
+		color_select_x[i]->setIcon(QIcon("icons/" + color_list[i]));
+		color_select_y[i]->setIcon(QIcon("icons/" + color_list[i]));
+
+		color_select_menu_z->addAction(color_select_z[i]);
+		color_select_menu_x->addAction(color_select_x[i]);
+		color_select_menu_y->addAction(color_select_y[i]);
+	}
 
 	toggle_menu_z = new QMenu();
 	toggle_menu_x = new QMenu();
@@ -166,25 +180,6 @@ Window::Window(MainWindow *mw)
 	init_menu_y->addAction(init_all);
 	init_menu_y->addAction(init_geometry);
 	init_menu_y->addAction(init_windowing);
-
-	function_select_menu_z = new QMenu();
-	function_select_menu_x = new QMenu();
-	function_select_menu_y = new QMenu();
-	function_select_menu_z->addAction(function_select_0_z);
-	function_select_menu_z->addAction(function_select_1_z);
-	function_select_menu_z->addAction(function_select_2_z);
-	function_select_menu_z->addAction(function_select_3_z);
-	function_select_menu_z->addAction(function_select_4_z);
-	function_select_menu_x->addAction(function_select_0_x);
-	function_select_menu_x->addAction(function_select_1_x);
-	function_select_menu_x->addAction(function_select_2_x);
-	function_select_menu_x->addAction(function_select_3_x);
-	function_select_menu_x->addAction(function_select_4_x);
-	function_select_menu_y->addAction(function_select_0_y);
-	function_select_menu_y->addAction(function_select_1_y);
-	function_select_menu_y->addAction(function_select_2_y);
-	function_select_menu_y->addAction(function_select_3_y);
-	function_select_menu_y->addAction(function_select_4_y);
 
 	toggle_menu_dvr = new QMenu();
 	init_menu_dvr = new QMenu();
@@ -218,17 +213,26 @@ Window::Window(MainWindow *mw)
 	menubar_layout_y->addWidget(name_y);
 	menubar_layout_dvr->addWidget(name_dvr);
 
+	add_menubar_button(menubar_layout_z, color_select_menu_z, "");
 	add_menubar_button(menubar_layout_z, function_select_menu_z, "icons/function.png");
 	add_menubar_button(menubar_layout_z, toggle_menu_z, "icons/view.png");
 	add_menubar_button(menubar_layout_z, init_menu_z, "icons/reset.png");
+	add_menubar_button(menubar_layout_x, color_select_menu_x, "");
 	add_menubar_button(menubar_layout_x, function_select_menu_x, "icons/function.png");
 	add_menubar_button(menubar_layout_x, toggle_menu_x, "icons/view.png");
 	add_menubar_button(menubar_layout_x, init_menu_x, "icons/reset.png");
+	add_menubar_button(menubar_layout_y, color_select_menu_y, "");
 	add_menubar_button(menubar_layout_y, function_select_menu_y, "icons/function.png");
 	add_menubar_button(menubar_layout_y, toggle_menu_y, "icons/view.png");
 	add_menubar_button(menubar_layout_y, init_menu_y, "icons/reset.png");
 	add_menubar_button(menubar_layout_dvr, toggle_menu_dvr, "icons/view.png");
 	add_menubar_button(menubar_layout_dvr, init_menu_dvr, "icons/reset.png");
+	color_button_z = dynamic_cast<QPushButton*>(menubar_layout_z->itemAt(1)->widget());
+	color_button_x = dynamic_cast<QPushButton*>(menubar_layout_x->itemAt(1)->widget());
+	color_button_y = dynamic_cast<QPushButton*>(menubar_layout_y->itemAt(1)->widget());
+	color_button_z->setIcon(QIcon("icons/" + color_list[function_color_z]));
+	color_button_x->setIcon(QIcon("icons/" + color_list[function_color_x]));
+	color_button_y->setIcon(QIcon("icons/" + color_list[function_color_y]));
 
 	menubar_z = new QWidget();
 	menubar_x = new QWidget();
@@ -259,7 +263,10 @@ Window::Window(MainWindow *mw)
 	function_label_z = create_label(slice_widget_z, 10, 10);
 	function_label_x = create_label(slice_widget_x, 10, 10);
 	function_label_y = create_label(slice_widget_y, 10, 10);
-	change_function_label();
+	function_label_z->setText(get_function_label(function_mode_z));
+	function_label_x->setText(get_function_label(function_mode_x));
+	function_label_y->setText(get_function_label(function_mode_y));
+
 
 	// add connections
 	connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(get_path()));
@@ -276,21 +283,36 @@ Window::Window(MainWindow *mw)
 	connect(init_geometry, &QAction::triggered, this, &Window::_init_geometry);
 	connect(init_windowing, &QAction::triggered, this, &Window::_init_windowing);
 
-	connect(function_select_0_z, &QAction::triggered, this, &Window::change_function_mode_0);
-	connect(function_select_0_x, &QAction::triggered, this, &Window::change_function_mode_0);
-	connect(function_select_0_y, &QAction::triggered, this, &Window::change_function_mode_0);
-	connect(function_select_1_z, &QAction::triggered, this, &Window::change_function_mode_1);
-	connect(function_select_1_x, &QAction::triggered, this, &Window::change_function_mode_1);
-	connect(function_select_1_y, &QAction::triggered, this, &Window::change_function_mode_1);
-	connect(function_select_2_z, &QAction::triggered, this, &Window::change_function_mode_2);
-	connect(function_select_2_x, &QAction::triggered, this, &Window::change_function_mode_2);
-	connect(function_select_2_y, &QAction::triggered, this, &Window::change_function_mode_2);
-	connect(function_select_3_z, &QAction::triggered, this, &Window::change_function_mode_3);
-	connect(function_select_3_x, &QAction::triggered, this, &Window::change_function_mode_3);
-	connect(function_select_3_y, &QAction::triggered, this, &Window::change_function_mode_3);
-	connect(function_select_4_z, &QAction::triggered, this, &Window::change_function_mode_4);
-	connect(function_select_4_x, &QAction::triggered, this, &Window::change_function_mode_4);
-	connect(function_select_4_y, &QAction::triggered, this, &Window::change_function_mode_4);
+	QSignalMapper *function_mapper_z = new QSignalMapper(this);
+	QSignalMapper *function_mapper_x = new QSignalMapper(this);
+	QSignalMapper *function_mapper_y = new QSignalMapper(this);
+	QSignalMapper *color_mapper_z = new QSignalMapper(this);
+	QSignalMapper *color_mapper_x = new QSignalMapper(this);
+	QSignalMapper *color_mapper_y = new QSignalMapper(this);
+	connect(function_mapper_z, SIGNAL(mapped(int)), this, SLOT(change_function_mode_z(int)));
+	connect(function_mapper_x, SIGNAL(mapped(int)), this, SLOT(change_function_mode_x(int)));
+	connect(function_mapper_y, SIGNAL(mapped(int)), this, SLOT(change_function_mode_y(int)));
+	connect(color_mapper_z, SIGNAL(mapped(int)), this, SLOT(change_color_z(int)));
+	connect(color_mapper_x, SIGNAL(mapped(int)), this, SLOT(change_color_x(int)));
+	connect(color_mapper_y, SIGNAL(mapped(int)), this, SLOT(change_color_y(int)));
+	for (int i = 0; i < 5; i++) {
+		connect(function_select_z[i], SIGNAL(triggered()), function_mapper_z, SLOT(map()));
+		connect(function_select_x[i], SIGNAL(triggered()), function_mapper_x, SLOT(map()));
+		connect(function_select_y[i], SIGNAL(triggered()), function_mapper_y, SLOT(map()));
+
+		function_mapper_z->setMapping(function_select_z[i], i);
+		function_mapper_x->setMapping(function_select_x[i], i);
+		function_mapper_y->setMapping(function_select_y[i], i);
+	}
+	for (int i = 0; i < 7; i++) {
+		connect(color_select_z[i], SIGNAL(triggered()), color_mapper_z, SLOT(map()));
+		connect(color_select_x[i], SIGNAL(triggered()), color_mapper_x, SLOT(map()));
+		connect(color_select_y[i], SIGNAL(triggered()), color_mapper_y, SLOT(map()));
+
+		color_mapper_z->setMapping(color_select_z[i], i);
+		color_mapper_x->setMapping(color_select_x[i], i);
+		color_mapper_y->setMapping(color_select_y[i], i);
+	}
 
 	connect(slice_widget_z, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
 	connect(slice_widget_x, SIGNAL(coord_info_sig(int, float, float, float, int)), this, SLOT(update_coord(int, float, float, float, int)));
@@ -388,9 +410,6 @@ void Window::hide_tree()
 
 void Window::_init_geometry()
 {
-	if (function_mode > 0)
-		return;
-
 	data_cube->init_MPR();
 
 	slice_widget_z->get_slice();
@@ -413,50 +432,57 @@ void Window::_init_all()
 
 	_init_geometry();
 }
-void Window::_set_mode() {
-	slice_widget_z->set_mode(function_mode);
-	slice_widget_x->set_mode(function_mode);
-	slice_widget_y->set_mode(function_mode);
-}
-void Window::change_function_mode_0()
+
+void Window::change_function_mode_z(int m)
 {
-	if (function_mode != 0) {
-		function_mode = 0;
-		change_function_label();
-		_set_mode();
-	}
+	if (function_mode_z == m)
+		return;
+
+	function_mode_z = m;
+	function_label_z->setText(get_function_label(function_mode_z));
+	slice_widget_z->set_mode(function_mode_z);
 }
-void Window::change_function_mode_1()
+void Window::change_function_mode_x(int m)
 {
-	if (function_mode != 1)	{
-		function_mode = 1;
-		change_function_label();
-		_set_mode();
-	}
+	if (function_mode_x == m)
+		return;
+
+	function_mode_x = m;
+	function_label_x->setText(get_function_label(function_mode_x));
+	slice_widget_x->set_mode(function_mode_x);
 }
-void Window::change_function_mode_2()
+void Window::change_function_mode_y(int m)
 {
-	if (function_mode != 2) {
-		function_mode = 2;
-		change_function_label();
-		_set_mode();
-	}
+	if (function_mode_y == m)
+		return;
+
+	function_mode_y = m;
+	function_label_y->setText(get_function_label(function_mode_y));
+	slice_widget_y->set_mode(function_mode_y);
 }
-void Window::change_function_mode_3()
+void Window::change_color_z(int c)
 {
-	if (function_mode != 3) {
-		function_mode = 3;
-		change_function_label();
-		_set_mode();
-	}
+	if (function_color_z == c)
+		return;
+
+	function_color_z = c;
+	color_button_z->setIcon(QIcon("icons/" + color_list[function_color_z]));
 }
-void Window::change_function_mode_4()
+void Window::change_color_x(int c)
 {
-	if (function_mode != 4) {
-		function_mode = 4;
-		change_function_label();
-		_set_mode();
-	}
+	if (function_color_x == c)
+		return;
+
+	function_color_x = c;
+	color_button_x->setIcon(QIcon("icons/" + color_list[function_color_x]));
+}
+void Window::change_color_y(int c)
+{
+	if (function_color_y == c)
+		return;
+
+	function_color_y = c;
+	color_button_y->setIcon(QIcon("icons/" + color_list[function_color_y]));
 }
 
 void Window::get_path()
@@ -632,11 +658,27 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	}
 	//selected->setText(QString::number(p_min) + ", " + QString::number(p_max));
 
+
+	// initialize mask_3d
+	if (mask_3d != NULL) {
+		for (int m = 0; m < mask_count; m++)
+			free(mask_3d[m]);
+	}
 	free(mask_3d);
-	int mask_count = 1;
-	mask_3d = (short*)malloc(mask_count * z * x * y * sizeof(short));
-	for (int i = 0; i < mask_count*x*y*z; i++)
-		mask_3d[i] = 0;
+	mask_3d = (short **)malloc(mask_count * sizeof(short *));
+	for (int m = 0; m < mask_count; m++) {
+		mask_3d[m] = (short *)malloc(z * x * y * sizeof(short));
+		for (int i = 0; i < x*y*z; i++)
+			mask_3d[m][i] = 0;
+
+		/*for (int i = 0; i < z; i++) {
+			for (int j = 0; j < y; j++) {
+				for (int k = 0; k < x; k++) {
+					mask_3d[m][x*y*i + x * j + k] = 100 < i && i < 150 && 30*m < j && j < 30+30*m && 30*m < k && k < 30*m+30 ? 1 : 0;
+				}
+			}
+		}*/
+	}
 
 	int slice_pixel_num_h = 512;
 	int slice_pixel_num_w = 512 * 7 / 4;
@@ -645,24 +687,30 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
 
-	/*
-	TODO_CGIP: add class objects here
 
+	//TODO_CGIP: add class objects here
+	/*
 	cgip_volume = new CgipVolume(x, y, z, data_3d);
-	cgip_mask = new CgipMask(x, y, z, mask_3d);
+	cgip_mask = (CgipMask **)malloc(mask_count * sizeof(CgipMask *));
+	for (int m = 0; m < mask_count; m++)
+		cgip_mask[m] = new CgipMask(x, y, z, mask_3d[m]);
+
 	cgip_volume->setSpacingX(1);
 	cgip_volume->setSpacingY(1);
 	cgip_volume->setSpacingZ(slice_thickness);
-
 	cgip_magic_brush = new CgipMagicBrush(50, 1, cgip_volume, cgip_mask);
 	*/
 
+
+	// set data_cube and slice_widget
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
 	data_cube->set_mask(mask_3d, mask_count);
 	slice_widget_z->set_data(data_cube);
 	slice_widget_x->set_data(data_cube);
 	slice_widget_y->set_data(data_cube);
 
+
+	// set dvr widget
 	if (!dvr_widget) {
 		container_3->removeItem(container_3->itemAt(3));
 		blank_dvr->setVisible(false);
@@ -723,11 +771,12 @@ QHBoxLayout *Window::create_menubar()
 	return menubar_layout;
 }
 
-void Window::add_menubar_button(QHBoxLayout *m_layout, QMenu *m, QString icon_path)
+void Window::add_menubar_button(QHBoxLayout *m_layout, QMenu *m, QString icon_path="")
 {
 	QPushButton *new_button = new QPushButton;
 	new_button->setStyleSheet("text-align:left;");
-	new_button->setIcon(QIcon(icon_path));
+	if (icon_path != "")
+		new_button->setIcon(QIcon(icon_path));
 	new_button->setIconSize(QSize(20, 20));
 	new_button->setMenu(m);
 
@@ -817,16 +866,14 @@ void Window::toggle_skipping_label()
 	skipping_label->setText(skip_text);
 	skipping_mode = skipping_mode ? false : true;
 }
-void Window::change_function_label()
+QString Window::get_function_label(int m)
 {
 	QString mode_text = "current function: ";
-	mode_text += function_list[function_mode];
-	if (function_mode != 0)
+	mode_text += function_list[m];
+	if (m != 0)
 		mode_text += function_started ? " - started" : " - terminated";
 
-	function_label_z->setText(mode_text);
-	function_label_x->setText(mode_text);
-	function_label_y->setText(mode_text);
+	return QString(mode_text);
 }
 
 void Window::keyPressEvent(QKeyEvent *e)
@@ -835,6 +882,28 @@ void Window::keyPressEvent(QKeyEvent *e)
 		close();
 	else
 		QWidget::keyPressEvent(e);
+}
+
+tuple<int, int> Window::get_function_status(int slice_type)
+{
+	int this_function_mode, this_function_color;
+	if (slice_type == 0) {
+		this_function_mode = function_mode_z;
+		this_function_color = function_color_z;
+		function_label_z->setText(get_function_label(function_mode_z));
+	}
+	else if (slice_type == 1) {
+		this_function_mode = function_mode_x;
+		this_function_color = function_color_x;
+		function_label_x->setText(get_function_label(function_mode_x));
+	}
+	else {
+		this_function_mode = function_mode_y;
+		this_function_color = function_color_y;
+		function_label_y->setText(get_function_label(function_mode_y));
+	}
+
+	return { this_function_mode, this_function_color };
 }
 
 void Window::update_coord(int slice_type, float x, float y, float z, int v)
@@ -855,52 +924,62 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 }
 void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_type)
 {
+	function_started = 1;
+	int this_function_mode, this_function_color;
+	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
+
+	//TODO_CGIP: add mouse press event here
 	/*
-	TODO_CGIP: add mouse press event here
 	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
 	Tip2: change function_started to 1 when started
 	Tip3: click_type = 1 is left, 2 is right click
+
+	if (this_function_mode == 1) {
+
+	}
+	else if (this_function_mode == 2) {
+
+	}
 	*/
-	function_started = 1;
-	if (function_mode == 1) {
-
-	}
-	else if (function_mode == 2) {
-
-	}
-
-	change_function_label();
 }
 void Window::mouse_moved(int slice_type, float x, float y, float z)
 {
+	int this_function_mode, this_function_color;
+	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
+	//TODO_CGIP: add mouse move event here
 	/*
-	TODO_CGIP: add mouse move event here
 	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
 	Tip2: this is called only if function_started == 1
-	*/
+
 	if (function_mode == 1) {
 
 	}
 	else if (function_mode == 2) {
 
 	}
+	*/
 }
 void Window::mouse_released(int slice_type, float x, float y, float z)
 {
+	function_started = 0;
+	int this_function_mode, this_function_color;
+	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
+
+	//TODO_CGIP: add mouse release event here
 	/*
-	TODO_CGIP: add mouse release event here
 	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
 	Tip2: change function_started to 0 when terminated
 	TIP3: to update slices, do "update_all_slice();"
+
+	CgipMask this_mask = cgip_mask[this_function_color];
+
+	if (this_function_mode == 1) {
+
+	}
+	else if (this_function_mode == 2) {
+
+	}
 	*/
-	function_started = 0;
-	if (function_mode == 1) {
-
-	}
-	else if (function_mode == 2) {
-
-	}
 
 	update_all_slice();
-	change_function_label();
 }

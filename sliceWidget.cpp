@@ -94,16 +94,14 @@ void SliceWidget::set_windowing(int wl, int ww)
 void SliceWidget::apply_windowing()
 {
 	// rescale pixel value to HU unit, apply windowing, blend with mask data, then convert to RGB(0~255)
-	float mask_color_list[27] = {
-		255, 0, 255,
-		0, 255, 255,
-		255, 255, 0,
-		255, 0, 128,
-		255, 128, 0,
-		255, 128, 0,
-		128, 0, 255,
-		128, 0, 255,
-		128, 255, 0
+	float mask_color_list[21] = {
+		255, 0, 255, // magenta
+		0, 255, 255, // cyan
+		255, 255, 0, // yellow
+		255, 128, 0, // orange
+		128, 0, 255, // violet
+		0, 128, 255, // azure
+		255, 0, 128  // rose
 	};
 	float mask_opacity = 0.5;
 

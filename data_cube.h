@@ -16,12 +16,12 @@ class DataCube
 public:
 	DataCube();
 	void set_data(short *data, int x, int y, int z, int p_w, int p_h, int a, int b, float t, int mi, int ma);
-	void set_mask(short *mask, int n_m);
+	void set_mask(short **mask, int n_m);
 	void init_MPR();
 	tuple<int, int, int, float> get_data_size();
 	tuple<int, int, int, int, int, int, int> get_pixel_info();
 	short* get_raw_data();
-	short* get_cur_mask();
+	short* get_cur_mask(int mask_idx);
 	void get_slice(int slice_type, int *slice_data, int *mask_data);
 	tuple<float, float, float, int> get_coord(int slice_type, int m_x, int m_y);
 	tuple<int, int, float> get_line_info(int slice_type);
@@ -40,7 +40,7 @@ protected:
 
 private:
 	short *data_3d;							// 3d data points
-	short *mask_3d;							// 3d mask points
+	short **mask_3d;						// 3d mask points
 	int N_x, N_y, N_z, N_max, N_mask,		// size of total data
 		slice_pixel_num_w, slice_pixel_num_h, // number of pixels of slice
 		rescale_slope, rescale_intercept,	// dicom pixel rescale values
