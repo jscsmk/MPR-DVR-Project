@@ -38,6 +38,7 @@ signals:
 	void line_moved_sig(int which); // which = 0: v-line, 1: h-line, 2: both-line, 3: wheel event
 	void zoom_panning_sig();
 	void windowing_changed_sig(int wl, int ww);
+	void wheel_sig(int slice_type, int key_type, int dir);
 
 protected:
 	void mousePressEvent(QMouseEvent *event) override;

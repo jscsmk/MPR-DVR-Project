@@ -336,24 +336,38 @@ void SliceWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
 void SliceWidget::wheelEvent(QWheelEvent *event)
 {
-	if (mode != 0)
+	if (mode < 0)
 		return;
 
 	QPoint wd = event->angleDelta();
 	int wheel_delta = wd.y(); // only check if positive or negative
-	int moved = 0;
 
-	if (wheel_delta > 0)
-		moved = data_cube->move_slice(slice_type, slice_type, 1);
-	else
-		moved = data_cube->move_slice(slice_type, slice_type, -1);
+	if (mode == 0) {
+		int moved = 0;
+		if (wheel_delta > 0)
+			moved = data_cube->move_slice(slice_type, slice_type, 1);
+		else
+			moved = data_cube->move_slice(slice_type, slice_type, -1);
 
-	if (moved == 0) // not moved
-		return;
+		if (moved == 0) // not moved
+			return;
 
-	get_slice();
-	emit line_moved_sig(3);
-	emit_coord_sig(event->x(), event->y());
+		get_slice();
+		emit line_moved_sig(3);
+		emit_coord_sig(event->x(), event->y());
+	}
+	else {
+		int key_type;
+		if (event->modifiers() & Qt::ControlModifier)
+			key_type = 1;
+		else if (event->modifiers() & Qt::ShiftModifier)
+			key_type = 2;
+		else
+			return;
+
+		int dir = wheel_delta > 0 ? 1 : -1;
+		emit wheel_sig(slice_type, key_type, dir);
+	}
 }
 
 void SliceWidget::mouseMoveEvent(QMouseEvent *event)

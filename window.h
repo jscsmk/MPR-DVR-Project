@@ -69,6 +69,7 @@ private slots:
 	void mouse_pressed(int slice_type, float x, float y, float z, int click_type);
 	void mouse_moved(int slice_type, float x, float y, float z);
 	void mouse_released(int slice_type, float x, float y, float z);
+	void wheel_changed(int slice_type, int key_type, int dir);
 
 private:
 	MainWindow *main_window;

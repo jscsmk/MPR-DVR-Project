@@ -323,6 +323,9 @@ Window::Window(MainWindow *mw)
 	connect(slice_widget_z, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
 	connect(slice_widget_x, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
 	connect(slice_widget_y, SIGNAL(mouse_release_sig(int, float, float, float)), this, SLOT(mouse_released(int, float, float, float)));
+	connect(slice_widget_z, SIGNAL(wheel_sig(int, int, int)), this, SLOT(wheel_changed(int, int, int)));
+	connect(slice_widget_x, SIGNAL(wheel_sig(int, int, int)), this, SLOT(wheel_changed(int, int, int)));
+	connect(slice_widget_y, SIGNAL(wheel_sig(int, int, int)), this, SLOT(wheel_changed(int, int, int)));
 
 	connect(slice_widget_z, SIGNAL(windowing_info_sig(QString)), window_z, SLOT(setText(QString)));
 	connect(slice_widget_x, SIGNAL(windowing_info_sig(QString)), window_x, SLOT(setText(QString)));
@@ -982,4 +985,12 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 	*/
 
 	update_all_slice();
+}
+void Window::wheel_changed(int slice_type, int key_type, int dir)
+{
+	//TODO_CGIP: add mouse wheel event here
+	/*
+	Tip1: key_type = 1 is Ctrl key, key_type = 2 is Shift key
+	Tip2: dir is either 1 or -1
+	*/
 }
