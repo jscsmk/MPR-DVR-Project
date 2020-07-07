@@ -105,7 +105,7 @@ Window::Window(MainWindow *mw)
 	QMenu *color_select_menu_z, *color_select_menu_x, *color_select_menu_y;
 	QAction *toggle_slice_line_z, *toggle_slice_line_x, *toggle_slice_line_y;
 	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
-	QAction *function_select_z[5], *function_select_x[5], *function_select_y[5];
+	QAction *function_select_z[n_functions], *function_select_x[n_functions], *function_select_y[n_functions];
 	QAction *color_select_z[7], *color_select_x[7], *color_select_y[7];
 	QAction *init_all, *init_geometry, *init_windowing;
 	QMenu *toggle_menu_dvr, *init_menu_dvr;
@@ -136,7 +136,7 @@ Window::Window(MainWindow *mw)
 	color_select_menu_z = new QMenu();
 	color_select_menu_x = new QMenu();
 	color_select_menu_y = new QMenu();
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < n_functions; i++) {
 		function_select_z[i] = new QAction(function_list[i]);
 		function_select_x[i] = new QAction(function_list[i]);
 		function_select_y[i] = new QAction(function_list[i]);
@@ -296,7 +296,7 @@ Window::Window(MainWindow *mw)
 	connect(color_mapper_z, SIGNAL(mapped(int)), this, SLOT(change_color_z(int)));
 	connect(color_mapper_x, SIGNAL(mapped(int)), this, SLOT(change_color_x(int)));
 	connect(color_mapper_y, SIGNAL(mapped(int)), this, SLOT(change_color_y(int)));
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < n_functions; i++) {
 		connect(function_select_z[i], SIGNAL(triggered()), function_mapper_z, SLOT(map()));
 		connect(function_select_x[i], SIGNAL(triggered()), function_mapper_x, SLOT(map()));
 		connect(function_select_y[i], SIGNAL(triggered()), function_mapper_y, SLOT(map()));
@@ -445,6 +445,20 @@ void Window::change_function_mode_z(int m)
 	function_mode_z = m;
 	function_label_z->setText(get_function_label(function_mode_z));
 	slice_widget_z->set_mode(function_mode_z);
+
+	// In case CgipMagicBrush
+	if (function_mode_z == 5) {
+		change_function_mode_x(5);
+		change_function_mode_y(5);
+
+		if (cgip_magic_brush == nullptr) {
+			int this_function_mode, this_function_color;
+			tie(this_function_mode, this_function_color) = get_function_status(0);
+			printf("num: %d ", this_function_color);
+			cgip_magic_brush = new CgipMagicBrush(30.0, 10.0, cgip_volume, cgip_mask[this_function_color]);
+			printf("Created Magic Brush\n");
+		}
+	}
 }
 void Window::change_function_mode_x(int m)
 {
@@ -972,18 +986,23 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 		cgip_mprmod->getPlaneMaskFromVolume(cgip_maskimage, cgip_mask[this_function_color]);
 	}
 
-	CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
 	if (this_function_mode == 1) { // free draw
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_freedraw->init(cgip_maskimage);
 		cgip_freedraw->startBall(point2d);
 		function_started = 1;
 	}
 	else if (this_function_mode == 2) { // brush
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_brush->init(cgip_maskimage);
 		cgip_brush->startBall(point2d);
 		function_started = 1;
 	}
 	else if (this_function_mode == 3) { // curve
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		if (function_started == 0) { // first pressed
 			if (click_type == 1) {
 				cgip_curve->init(cgip_maskimage);
@@ -1003,6 +1022,8 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 		}
 	}
 	else if (this_function_mode == 4) { // livewire
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		if (function_started == 0) { // first pressed
 			cgip_image = new CgipMask2D(w, h);
 			cgip_mprmod->getPlaneMaskFromVolume(cgip_image, cgip_volume);
@@ -1019,6 +1040,14 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 				cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
 				function_started = 0;
 			}
+		}
+	}
+	else if (this_function_mode == 5) { // Magic brush
+		if (cgip_magic_brush) {
+			cgip_magic_brush->startBrush(CgipPoint(x, y, z / slice_thickness));
+			update_all_slice();
+			function_started = 1;
+
 		}
 	}
 }
@@ -1038,18 +1067,33 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 
 	}
 	*/
-	CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
 	if (this_function_mode == 1) { // free draw
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_freedraw->moveBall(point2d);
 	}
 	else if (this_function_mode == 2) { // brush
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_brush->moveBall(point2d);
+		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
+		update_all_slice();
 	}
 	else if (this_function_mode == 3) { // curve
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_curve->moveCurve(point2d);
 	}
 	else if (this_function_mode == 4) { // livewire
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_livewire->moveWire(point2d);
+	}
+	else if (this_function_mode == 5) { // Magic brush
+		if (cgip_magic_brush) {
+			cgip_magic_brush->moveBrush(CgipPoint(x, y, z / slice_thickness));
+			update_all_slice();
+		}
 	}
 }
 void Window::mouse_released(int slice_type, float x, float y, float z)
@@ -1072,18 +1116,27 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 
 	}
 	*/
-	CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
 	if (this_function_mode == 1) { // free draw
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_freedraw->endBall(point2d);
 		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
 
 		function_started = 0;
 	}
 	else if (this_function_mode == 2) { // brush
+		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
+
 		cgip_brush->endBall(point2d);
 		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
 
 		function_started = 0;
+	}
+	else if (this_function_mode == 5) { // Magic brush
+		if (cgip_magic_brush) {
+			cgip_magic_brush->endBrush(CgipPoint(x, y, z / slice_thickness));
+			function_started = 0;
+		}
 	}
 
 	update_all_slice();

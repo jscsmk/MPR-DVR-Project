@@ -7,6 +7,8 @@
 #include "sliceWidget.h"
 //TODO_CGIP: add header files here
 
+#include "cgip_headers/CgipMagicBrush/CgipMagicBrush.h"
+
 #include "cgip_headers/FreeDraw/CgipBrush.h"
 #include "cgip_headers/FreeDraw/CgipFreeDraw.h"
 #include "cgip_headers/FreeDraw/CgipCurve.h"
@@ -105,7 +107,8 @@ private:
 	bool skipping_mode;
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
-	QString function_list[5] = { "off", "free draw", "brush", "curve", "live wire" };
+	static const int n_functions = 6;
+	QString function_list[6] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush"};
 	QString color_list[7] = { "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
@@ -123,6 +126,8 @@ private:
 
 	//TODO_CGIP: add pointers for class objects of functions
 	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
+
+	cgip::CgipMagicBrush* cgip_magic_brush = nullptr;
 
 	cgip::CgipMPRMod* cgip_mprmod;
 	cgip::CgipBrush* cgip_brush;
