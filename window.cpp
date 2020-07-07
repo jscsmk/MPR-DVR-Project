@@ -731,11 +731,6 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	cgip_volume->setSpacingY(1);
 	cgip_volume->setSpacingZ(slice_thickness);
 
-	cgip_brush = new CgipBrush(action, radius);
-	cgip_curve = new CgipCurve(action);
-	cgip_freedraw = new CgipFreeDraw(action);
-	cgip_livewire = new CgipLiveWire(action);
-
 	// set data_cube and slice_widget
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
 	data_cube->set_mask(mask_3d, mask_count);
@@ -982,62 +977,52 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0)) {
 		tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(slice_type);
 		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()));
-		cgip_maskimage = new CgipMask2D(w, h);
-		cgip_mprmod->getPlaneMaskFromVolume(cgip_maskimage, cgip_mask[this_function_color]);
 	}
 
 	if (this_function_mode == 1) { // free draw
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_freedraw->init(cgip_maskimage);
-		cgip_freedraw->startBall(point2d);
+		cgip_freedraw = new CgipFreeDraw(action, cgip_mask[this_function_color]);
+		cgip_freedraw->init_mpr(cgip_mprmod);
+		cgip_freedraw->startBall(CgipPoint(x, y, z));
 		function_started = 1;
 	}
 	else if (this_function_mode == 2) { // brush
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_brush->init(cgip_maskimage);
-		cgip_brush->startBall(point2d);
+		cgip_brush = new CgipBrush(action, radius, cgip_mask[this_function_color]);
+		cgip_brush->init_mpr(cgip_mprmod);
+		cgip_brush->startBall(CgipPoint(x, y, z));
 		function_started = 1;
 	}
 	else if (this_function_mode == 3) { // curve
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
 		if (function_started == 0) { // first pressed
 			if (click_type == 1) {
-				cgip_curve->init(cgip_maskimage);
-				cgip_curve->startCurve(point2d);
+				cgip_curve = new CgipCurve(action, cgip_mask[this_function_color]);
+				cgip_curve->init_mpr(cgip_mprmod);
+				cgip_curve->startCurve(CgipPoint(x, y, z));
 				function_started = 1;
 			}
 		}
 		else {
 			if (click_type == 1) {
-				cgip_curve->addPoints(point2d);
+				cgip_curve->addPoints(CgipPoint(x, y, z));
 			}
 			else if (click_type == 2) {
-				cgip_curve->endCurve(point2d);
-				cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
+				cgip_curve->endCurve(CgipPoint(x, y, z));
 				function_started = 0;
 			}
 		}
 	}
 	else if (this_function_mode == 4) { // livewire
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
 		if (function_started == 0) { // first pressed
-			cgip_image = new CgipMask2D(w, h);
-			cgip_mprmod->getPlaneMaskFromVolume(cgip_image, cgip_volume);
-			cgip_livewire->init(cgip_image, cgip_maskimage);
-			cgip_livewire->startWire(point2d);
+			cgip_livewire = new CgipLiveWire(action, cgip_volume, cgip_mask[this_function_color]);
+			cgip_livewire->init_mpr(cgip_mprmod);
+			cgip_livewire->startWire(CgipPoint(x, y, z));
 			function_started = 1;
 		}
 		else {
 			if (click_type == 1) {
-				cgip_livewire->addSeed(point2d);
+				cgip_livewire->addSeed(CgipPoint(x, y, z));
 			}
 			else if (click_type == 2) {
-				cgip_livewire->endWire(point2d);
-				cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
+				cgip_livewire->endWire(CgipPoint(x, y, z));
 				function_started = 0;
 			}
 		}
@@ -1068,26 +1053,16 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 	}
 	*/
 	if (this_function_mode == 1) { // free draw
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_freedraw->moveBall(point2d);
+		cgip_freedraw->moveBall(CgipPoint(x, y, z));
 	}
 	else if (this_function_mode == 2) { // brush
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_brush->moveBall(point2d);
-		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
-		update_all_slice();
+		cgip_brush->moveBall(CgipPoint(x, y, z));
 	}
 	else if (this_function_mode == 3) { // curve
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_curve->moveCurve(point2d);
+		cgip_curve->moveCurve(CgipPoint(x, y, z));
 	}
 	else if (this_function_mode == 4) { // livewire
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_livewire->moveWire(point2d);
+		cgip_livewire->moveWire(CgipPoint(x, y, z));
 	}
 	else if (this_function_mode == 5) { // Magic brush
 		if (cgip_magic_brush) {
@@ -1117,18 +1092,12 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 	}
 	*/
 	if (this_function_mode == 1) { // free draw
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_freedraw->endBall(point2d);
-		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
+		cgip_freedraw->endBall(CgipPoint(x, y, z));
 
 		function_started = 0;
 	}
 	else if (this_function_mode == 2) { // brush
-		CgipPoint point2d = cgip_mprmod->get2DPointFrom3D(CgipPoint(x, y, z));
-
-		cgip_brush->endBall(point2d);
-		cgip_mprmod->getVolumeMaskFromPlane(cgip_maskimage, cgip_mask[this_function_color]);
+		cgip_brush->endBall(CgipPoint(x, y, z));
 
 		function_started = 0;
 	}
