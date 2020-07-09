@@ -982,13 +982,13 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	if (this_function_mode == 1) { // free draw
 		cgip_freedraw = new CgipFreeDraw(action, cgip_mask[this_function_color]);
 		cgip_freedraw->init_mpr(cgip_mprmod);
-		cgip_freedraw->startBall(CgipPoint(x, y, z));
+		cgip_freedraw->startBall(CgipPoint(x, y, z / slice_thickness));
 		function_started = 1;
 	}
 	else if (this_function_mode == 2) { // brush
 		cgip_brush = new CgipBrush(action, radius, cgip_mask[this_function_color]);
 		cgip_brush->init_mpr(cgip_mprmod);
-		cgip_brush->startBall(CgipPoint(x, y, z));
+		cgip_brush->startBall(CgipPoint(x, y, z / slice_thickness));
 		function_started = 1;
 	}
 	else if (this_function_mode == 3) { // curve
@@ -996,16 +996,16 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			if (click_type == 1) {
 				cgip_curve = new CgipCurve(action, cgip_mask[this_function_color]);
 				cgip_curve->init_mpr(cgip_mprmod);
-				cgip_curve->startCurve(CgipPoint(x, y, z));
+				cgip_curve->startCurve(CgipPoint(x, y, z / slice_thickness));
 				function_started = 1;
 			}
 		}
 		else {
 			if (click_type == 1) {
-				cgip_curve->addPoints(CgipPoint(x, y, z));
+				cgip_curve->addPoints(CgipPoint(x, y, z / slice_thickness));
 			}
 			else if (click_type == 2) {
-				cgip_curve->endCurve(CgipPoint(x, y, z));
+				cgip_curve->endCurve(CgipPoint(x, y, z / slice_thickness));
 				function_started = 0;
 			}
 		}
@@ -1014,15 +1014,15 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 		if (function_started == 0) { // first pressed
 			cgip_livewire = new CgipLiveWire(action, cgip_volume, cgip_mask[this_function_color]);
 			cgip_livewire->init_mpr(cgip_mprmod);
-			cgip_livewire->startWire(CgipPoint(x, y, z));
+			cgip_livewire->startWire(CgipPoint(x, y, z / slice_thickness));
 			function_started = 1;
 		}
 		else {
 			if (click_type == 1) {
-				cgip_livewire->addSeed(CgipPoint(x, y, z));
+				cgip_livewire->addSeed(CgipPoint(x, y, z / slice_thickness));
 			}
 			else if (click_type == 2) {
-				cgip_livewire->endWire(CgipPoint(x, y, z));
+				cgip_livewire->endWire(CgipPoint(x, y, z / slice_thickness));
 				function_started = 0;
 			}
 		}
@@ -1053,16 +1053,16 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 	}
 	*/
 	if (this_function_mode == 1) { // free draw
-		cgip_freedraw->moveBall(CgipPoint(x, y, z));
+		cgip_freedraw->moveBall(CgipPoint(x, y, z / slice_thickness));
 	}
 	else if (this_function_mode == 2) { // brush
-		cgip_brush->moveBall(CgipPoint(x, y, z));
+		cgip_brush->moveBall(CgipPoint(x, y, z / slice_thickness));
 	}
 	else if (this_function_mode == 3) { // curve
-		cgip_curve->moveCurve(CgipPoint(x, y, z));
+		cgip_curve->moveCurve(CgipPoint(x, y, z / slice_thickness));
 	}
 	else if (this_function_mode == 4) { // livewire
-		cgip_livewire->moveWire(CgipPoint(x, y, z));
+		cgip_livewire->moveWire(CgipPoint(x, y, z / slice_thickness));
 	}
 	else if (this_function_mode == 5) { // Magic brush
 		if (cgip_magic_brush) {
@@ -1092,12 +1092,12 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 	}
 	*/
 	if (this_function_mode == 1) { // free draw
-		cgip_freedraw->endBall(CgipPoint(x, y, z));
+		cgip_freedraw->endBall(CgipPoint(x, y, z / slice_thickness));
 
 		function_started = 0;
 	}
 	else if (this_function_mode == 2) { // brush
-		cgip_brush->endBall(CgipPoint(x, y, z));
+		cgip_brush->endBall(CgipPoint(x, y, z / slice_thickness));
 
 		function_started = 0;
 	}
