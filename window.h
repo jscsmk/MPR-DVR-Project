@@ -7,15 +7,14 @@
 #include "sliceWidget.h"
 //TODO_CGIP: add header files here
 
-#include "cgip_headers/CgipMagicBrush/CgipMagicBrush.h"
-
-#include "cgip_headers/FreeDraw/CgipBrush.h"
-#include "cgip_headers/FreeDraw/CgipFreeDraw.h"
-#include "cgip_headers/FreeDraw/CgipCurve.h"
-#include "cgip_headers/FreeDraw/CgipLiveWire.h"
-#include "cgip_headers/MPRMod/CgipMPRMod.h"
-
-#include "cgip_headers/Common/CgipVolume.h"
+#include "cgip_header/CgipMagicBrush/CgipMagicBrush.h"
+#include "cgip_header/FreeDraw/CgipBrush.h"
+#include "cgip_header/FreeDraw/CgipFreeDraw.h"
+#include "cgip_header/FreeDraw/CgipCurve.h"
+#include "cgip_header/FreeDraw/CgipLiveWire.h"
+#include "cgip_header/MPRMod/CgipMPRMod.h"
+#include "cgip_header/Common/CgipPoint.h"
+#include "cgip_header/Common/CgipVolume.h"
 
 
 class QSignalMapper;
