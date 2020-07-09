@@ -976,7 +976,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	float pl;
 	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0)) {
 		tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(slice_type);
-		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()));
+		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
 	}
 
 	if (this_function_mode == 1) { // free draw
