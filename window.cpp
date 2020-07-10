@@ -1157,6 +1157,14 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 			cgip_brush->setRadius(radius);
 			printf("radius: %f\n", radius);
 		}
+		else if (this_function_mode == 5) { // magic brush
+			if (cgip_magic_brush) {
+				float r_mb = cgip_magic_brush->getRadius();
+				r_mb = r_mb + (float)dir;
+				cgip_magic_brush->setRadius(r_mb);
+				printf("radius: %f\n", r_mb);
+			}
+		}
 	}
 	else if (key_type == 2) {
 		if (action == 0) {
@@ -1177,6 +1185,14 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 		}
 		else if (this_function_mode == 4) {
 			cgip_livewire->setAction(action);
+		}
+		else if (this_function_mode == 5) { // magic brush
+			if (cgip_magic_brush) {
+				float s = cgip_magic_brush->getSensitivity();
+				s = s + (float)dir;
+				cgip_magic_brush->setSensitivity(s);
+				printf("sensitivity: %f\n", s);
+			}
 		}
 	}
 }
