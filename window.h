@@ -15,6 +15,8 @@
 #include "cgip_header/MPRMod/CgipMPRMod.h"
 #include "cgip_header/Common/CgipPoint.h"
 #include "cgip_header/Common/CgipVolume.h"
+#include "cgip_header/GraphCut/CgipGraphCut2D.h"
+//#include "cgip_header/GraphCut/CgipGraphCut3D.h"
 
 
 class QSignalMapper;
@@ -107,8 +109,8 @@ private:
 	bool skipping_mode;
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
-	static const int n_functions = 6;
-	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush"};
+	static const int n_functions = 8;
+	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush", "graphcut 2d", "graphcut 3d"};
 	QString color_list[7] = { "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
@@ -121,7 +123,7 @@ private:
 
 	cgip::CgipVolume* cgip_volume;
 	cgip::CgipMask** cgip_mask;
-	cgip::CgipMask2D* cgip_maskimage;
+	cgip::CgipMask2D** cgip_maskimage;
 	cgip::CgipMask2D* cgip_image;
 
 	//TODO_CGIP: add pointers for class objects of functions
@@ -134,8 +136,10 @@ private:
 	cgip::CgipFreeDraw* cgip_freedraw;
 	cgip::CgipCurve* cgip_curve;
 	cgip::CgipLiveWire* cgip_livewire;
+	cgip::CgipGraphCut2D *cgip_gc_2d;
 
 	float radius;
+	float smooth;
 	int action;
 };
 

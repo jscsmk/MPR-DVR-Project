@@ -726,6 +726,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 
 	radius = 10;
 	action = 1;
+	smooth = 1;
 
 	cgip_volume->setSpacingX(1);
 	cgip_volume->setSpacingY(1);
@@ -983,7 +984,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	QVector3D s, r, d;
 	int w, h;
 	float pl;
-	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0)) {
+	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0) || this_function_mode >= 6) {
 		tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(slice_type);
 		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
 	}
@@ -1041,8 +1042,23 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			cgip_magic_brush->startBrush(CgipPoint(x, y, z / slice_thickness));
 			update_all_slice();
 			function_started = 1;
-
 		}
+	}
+	else if (this_function_mode == 6) { // graphcut 2d
+		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
+			if (click_type == 1) { // cut
+				cgip_gc_2d = new CgipGraphCut2D(cgip_volume, cgip_mask, mask_count);
+				cgip_gc_2d->set_data(cgip_mprmod);
+				cgip_gc_2d->cut();
+				function_started = 1;
+			}
+			else { // uncut
+				//cgip_gc_2d->uncut();
+				function_started = 0;
+			}
+		}		
+	}
+	else if (this_function_mode == 7) { // graphcut 3d
 	}
 }
 void Window::mouse_moved(int slice_type, float x, float y, float z)
@@ -1143,6 +1159,12 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				cgip_magic_brush->setRadius(r_mb);
 				printf("radius: %f\n", r_mb);
 			}
+		}
+		else if (this_function_mode == 6) { // graphcut 2d
+
+		}
+		else if (this_function_mode == 7) { // graphcut 3d
+
 		}
 	}
 	else if (key_type == 2) {
