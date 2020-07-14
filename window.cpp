@@ -875,6 +875,15 @@ void Window::y_line_moved(int which)
 
 	update_dvr_slices();
 }
+void Window::update_slice(int slice_type)
+{
+	if (slice_type == 0)
+		slice_widget_z->get_slice();
+	else if (slice_type == 1)
+		slice_widget_x->get_slice();
+	else // slice_type == 2
+		slice_widget_y->get_slice();
+}
 void Window::update_all_slice()
 {
 	slice_widget_z->get_slice();
@@ -1057,6 +1066,7 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 	}
 	else if (this_function_mode == 2) { // brush
 		cgip_brush->moveBall(CgipPoint(x, y, z / slice_thickness));
+		update_slice(slice_type);
 	}
 	else if (this_function_mode == 3) { // curve
 		cgip_curve->moveCurve(CgipPoint(x, y, z / slice_thickness));

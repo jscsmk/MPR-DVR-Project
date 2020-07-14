@@ -66,6 +66,7 @@ private slots:
 	void change_color_z(int c);
 	void change_color_x(int c);
 	void change_color_y(int c);
+	void update_slice(int slice_type);
 	void update_all_slice();
 	tuple<int, int> get_function_status(int slice_type);
 	void update_coord(int slice_type, float x, float y, float z, int v);
@@ -107,7 +108,7 @@ private:
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
 	static const int n_functions = 6;
-	QString function_list[6] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush"};
+	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush"};
 	QString color_list[7] = { "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
