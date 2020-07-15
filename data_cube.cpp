@@ -45,7 +45,7 @@ void DataCube::set_data(short *data, int x, int y, int z, int p_w, int p_h, int 
 	init_MPR();
 }
 
-void DataCube::set_mask(short **mask, int n_m)
+void DataCube::set_mask(short *mask, int n_m)
 {
 	mask_3d = mask;
 	N_mask = n_m;
@@ -95,9 +95,9 @@ short* DataCube::get_raw_data()
 {
 	return data_3d;
 }
-short* DataCube::get_cur_mask(int mask_idx)
+short* DataCube::get_cur_mask()
 {
-	return mask_3d[mask_idx];
+	return mask_3d;
 }
 
 void DataCube::toggle_border_line(int slice_type)
@@ -138,17 +138,17 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 	h = pl * h;
 
 #pragma omp parallel for
-	for (int i = 0; i < slice_pixel_num_h; i++) {
-		for (int j = 0; j < slice_pixel_num_w; j++) {
-			QVector3D temp = start + h*i + w*j;
-			int interpolated_data, cn_x, cn_y, cn_z;
-			interpolated_data = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
-			tie(cn_x, cn_y, cn_z) = closest_neighbor(temp.x(), temp.y(), temp.z());
-			slice_data[slice_pixel_num_w*i + j] = interpolated_data;
+	for (int ij = 0; ij < slice_pixel_num_h * slice_pixel_num_w; ij++) {
+		int i = ij / slice_pixel_num_w;
+		int j = ij % slice_pixel_num_w;
+		int interpolated_data, cn_x, cn_y, cn_z;
 
-			for (int m = 0; m < N_mask; m++)
-				mask_data[N_mask*(slice_pixel_num_w * i + j) + m] = cn_x > 0 ? mask_3d[m][N_x*N_y*cn_z + N_x*cn_y + cn_x] : 0;
-		}
+		QVector3D temp = start + h*i + w*j;
+		interpolated_data = trilinear_interpolation(slice_type, temp.x(), temp.y(), temp.z());
+		tie(cn_x, cn_y, cn_z) = closest_neighbor(temp.x(), temp.y(), temp.z());
+
+		slice_data[slice_pixel_num_w*i + j] = interpolated_data;
+		mask_data[slice_pixel_num_w*i + j] = cn_x > 0 ? mask_3d[N_x*N_y*cn_z + N_x*cn_y + cn_x] : 0;
 	}
 }
 

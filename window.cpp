@@ -72,9 +72,9 @@ Window::Window(MainWindow *mw)
 	function_mode_x = 0;
 	function_mode_y = 0;
 	function_started = 0;
-	function_color_z = 0;
-	function_color_x = 0;
-	function_color_y = 0;
+	function_color_z = 1;
+	function_color_x = 1;
+	function_color_y = 1;
 	mask_count = 7;
 
 	// add local file browser
@@ -106,7 +106,7 @@ Window::Window(MainWindow *mw)
 	QAction *toggle_slice_line_z, *toggle_slice_line_x, *toggle_slice_line_y;
 	QAction *toggle_border_line_z, *toggle_border_line_x, *toggle_border_line_y;
 	QAction *function_select_z[n_functions], *function_select_x[n_functions], *function_select_y[n_functions];
-	QAction *color_select_z[7], *color_select_x[7], *color_select_y[7];
+	QAction *color_select_z[8], *color_select_x[8], *color_select_y[8];
 	QAction *init_all, *init_geometry, *init_windowing;
 	QMenu *toggle_menu_dvr, *init_menu_dvr;
 
@@ -145,10 +145,18 @@ Window::Window(MainWindow *mw)
 		function_select_menu_x->addAction(function_select_x[i]);
 		function_select_menu_y->addAction(function_select_y[i]);
 	}
-	for (int i = 0; i < 7; i++) {
-		color_select_z[i] = new QAction("mask " + QString::number(i + 1));
-		color_select_x[i] = new QAction("mask " + QString::number(i + 1));
-		color_select_y[i] = new QAction("mask " + QString::number(i + 1));
+	for (int j = 0; j < 8; j++) {
+		int i = (j + 1) % 8;
+		if (i == 0) {
+			color_select_z[i] = new QAction("eraser");
+			color_select_x[i] = new QAction("eraser");
+			color_select_y[i] = new QAction("eraser");
+		}
+		else {
+			color_select_z[i] = new QAction("mask " + QString::number(i));
+			color_select_x[i] = new QAction("mask " + QString::number(i));
+			color_select_y[i] = new QAction("mask " + QString::number(i));
+		}
 
 		color_select_z[i]->setIcon(QIcon("icons/" + color_list[i]));
 		color_select_x[i]->setIcon(QIcon("icons/" + color_list[i]));
@@ -305,7 +313,7 @@ Window::Window(MainWindow *mw)
 		function_mapper_x->setMapping(function_select_x[i], i);
 		function_mapper_y->setMapping(function_select_y[i], i);
 	}
-	for (int i = 0; i < 7; i++) {
+	for (int i = 0; i < 8; i++) {
 		connect(color_select_z[i], SIGNAL(triggered()), color_mapper_z, SLOT(map()));
 		connect(color_select_x[i], SIGNAL(triggered()), color_mapper_x, SLOT(map()));
 		connect(color_select_y[i], SIGNAL(triggered()), color_mapper_y, SLOT(map()));
@@ -455,7 +463,7 @@ void Window::change_function_mode_z(int m)
 			int this_function_mode, this_function_color;
 			tie(this_function_mode, this_function_color) = get_function_status(0);
 			printf("num: %d ", this_function_color);
-			cgip_magic_brush = new CgipMagicBrush(30.0, 10.0, cgip_volume, cgip_mask[this_function_color]);
+			cgip_magic_brush = new CgipMagicBrush(30.0, 10.0, cgip_volume, cgip_mask);
 			printf("Created Magic Brush\n");
 		}
 	}
@@ -678,25 +686,8 @@ void Window::load_images(int z, int x, int y, int a, int b)
 
 
 	// initialize mask_3d
-	if (mask_3d != NULL) {
-		for (int m = 0; m < mask_count; m++)
-			free(mask_3d[m]);
-	}
 	free(mask_3d);
-	mask_3d = (short **)malloc(mask_count * sizeof(short *));
-	for (int m = 0; m < mask_count; m++) {
-		mask_3d[m] = (short *)malloc(z * x * y * sizeof(short));
-		for (int i = 0; i < x*y*z; i++)
-			mask_3d[m][i] = 0;
-
-		/*for (int i = 0; i < z; i++) {
-			for (int j = 0; j < y; j++) {
-				for (int k = 0; k < x; k++) {
-					mask_3d[m][x*y*i + x * j + k] = 100 < i && i < 150 && 30*m < j && j < 30+30*m && 30*m < k && k < 30*m+30 ? 1 : 0;
-				}
-			}
-		}*/
-	}
+	mask_3d = new short[z * x * y]();
 
 	int slice_pixel_num_h = 512;
 	int slice_pixel_num_w = 512 * 7 / 4;
@@ -720,9 +711,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	*/
 
 	cgip_volume = new CgipVolume(x, y, z, data_3d);
-	cgip_mask = (CgipMask**)malloc(mask_count * sizeof(CgipMask*));
-	for (int m = 0; m < mask_count; m++)
-		cgip_mask[m] = new CgipMask(x, y, z, mask_3d[m]);
+	cgip_mask = new CgipMask(x, y, z, mask_3d);
 
 	radius = 10;
 	action = 1;
@@ -737,9 +726,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	int down_x = x / down_ratio;
 	int down_y = y / down_ratio;
 	cgip_volume_down = new CgipVolume(down_x, down_y, z);
-	cgip_mask_down = new CgipMask*[mask_count];
-	for (int m = 0; m < mask_count; m++)
-		cgip_mask_down[m] = new CgipMask(down_x, down_y, z);
+	cgip_mask_down = new CgipMask(down_x, down_y, z);
 
 #pragma omp parallel for
 	for (int ijk = 0; ijk < down_x * down_y * z; ijk++) {
@@ -762,6 +749,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 
 
 	// set dvr widget
+	/*
 	if (!dvr_widget) {
 		container_3->removeItem(container_3->itemAt(3));
 		blank_dvr->setVisible(false);
@@ -796,6 +784,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 		skipping_label->move(10, 10);
 		skipping_label->setText(skip_text);
 	}
+	*/
 }
 
 QLabel *Window::create_label(QWidget *sw, int loc_w, int loc_h)
@@ -914,8 +903,10 @@ void Window::update_all_slice()
 }
 void Window::update_dvr_slices()
 {
+	/*
 	if (dvr_widget)
 		dvr_widget->get_slice_info();
+	*/
 }
 
 void Window::toggle_skipping_label()
@@ -1011,13 +1002,13 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	}
 
 	if (this_function_mode == 1) { // free draw
-		cgip_freedraw = new CgipFreeDraw(action, cgip_mask[this_function_color]);
+		cgip_freedraw = new CgipFreeDraw(this_function_color, cgip_mask);
 		cgip_freedraw->init_mpr(cgip_mprmod);
 		cgip_freedraw->startBall(CgipPoint(x, y, z / slice_thickness));
 		function_started = 1;
 	}
 	else if (this_function_mode == 2) { // brush
-		cgip_brush = new CgipBrush(action, radius, cgip_mask[this_function_color]);
+		cgip_brush = new CgipBrush(this_function_color, radius, cgip_mask);
 		cgip_brush->init_mpr(cgip_mprmod);
 		cgip_brush->startBall(CgipPoint(x, y, z / slice_thickness));
 		function_started = 1;
@@ -1025,7 +1016,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	else if (this_function_mode == 3) { // curve
 		if (function_started == 0) { // first pressed
 			if (click_type == 1) {
-				cgip_curve = new CgipCurve(action, cgip_mask[this_function_color]);
+				cgip_curve = new CgipCurve(this_function_color, cgip_mask);
 				cgip_curve->init_mpr(cgip_mprmod);
 				cgip_curve->startCurve(CgipPoint(x, y, z / slice_thickness));
 				function_started = 1;
@@ -1043,7 +1034,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	}
 	else if (this_function_mode == 4) { // livewire
 		if (function_started == 0) { // first pressed
-			cgip_livewire = new CgipLiveWire(action, cgip_volume, cgip_mask[this_function_color]);
+			cgip_livewire = new CgipLiveWire(this_function_color, cgip_volume, cgip_mask);
 			cgip_livewire->init_mpr(cgip_mprmod);
 			cgip_livewire->startWire(CgipPoint(x, y, z / slice_thickness));
 			function_started = 1;
@@ -1097,13 +1088,12 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 					int k = ijk / (down_x * down_y);
 					int j = (ijk % (down_x * down_y)) / down_x;
 					int i = (ijk % (down_x * down_y)) % down_x;
-					for (int m = 0; m < mask_count; m++) {
-						cgip_mask_down[m]->setVoxelValue(i, j, k, cgip_mask[m]->getVoxelValue(
-							((CgipFloat)i * (up_x - 1)) / (down_x - 1),
-							((CgipFloat)j * (up_y - 1)) / (down_y - 1),
-							((CgipFloat)k * (up_z - 1)) / (down_z - 1)
-						));
-					}
+
+					cgip_mask_down->setVoxelValue(i, j, k, cgip_mask->getVoxelValue(
+						((CgipFloat)i * (up_x - 1)) / (down_x - 1),
+						((CgipFloat)j * (up_y - 1)) / (down_y - 1),
+						((CgipFloat)k * (up_z - 1)) / (down_z - 1)
+					));
 				}
 
 				// apply 3d graph cut
@@ -1116,13 +1106,11 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 					int k = ijk / (up_x * up_y);
 					int j = (ijk % (up_x * up_y)) / up_x;
 					int i = (ijk % (up_x * up_y)) % up_x;
-					for (int m = 0; m < mask_count; m++) {
-						cgip_mask[m]->setVoxelValue(i, j, k, cgip_mask_down[m]->getVoxelValue(
-							((CgipFloat)i * (down_x - 1)) / (up_x - 1),
-							((CgipFloat)j * (down_y - 1)) / (up_y - 1),
-							((CgipFloat)k * (down_z - 1)) / (up_z - 1)
-						));
-					}
+					cgip_mask->setVoxelValue(i, j, k, cgip_mask_down->getVoxelValue(
+						((CgipFloat)i * (down_x - 1)) / (up_x - 1),
+						((CgipFloat)j * (down_y - 1)) / (up_y - 1),
+						((CgipFloat)k * (down_z - 1)) / (up_z - 1)
+					));
 				}
 			}
 			else { // uncut

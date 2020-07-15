@@ -104,14 +104,14 @@ private:
 	QAction *init_DVR_all, *init_DVR_geometry, *init_DVR_windowing;
 	QAction *toggle_DVR_mode, *toggle_DVR_skipping, *toggle_DVR_border_line, *toggle_DVR_axial_plane, *toggle_DVR_sagittal_plane, *toggle_DVR_coronal_plane;
 	short *data_3d;
-	short **mask_3d;
+	short *mask_3d;
 	int mask_count;
 	bool skipping_mode;
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
 	static const int n_functions = 8;
 	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush", "graphcut 2d", "graphcut 3d"};
-	QString color_list[7] = { "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
+	QString color_list[8] = { "eraser.png", "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
 	//TODO_CGIP: add pointers for class objects of functions
@@ -122,11 +122,11 @@ private:
 	*/
 
 	cgip::CgipVolume* cgip_volume;
-	cgip::CgipMask** cgip_mask;
-	cgip::CgipMask2D** cgip_maskimage;
+	cgip::CgipMask* cgip_mask;
+	cgip::CgipMask2D* cgip_maskimage;
 	cgip::CgipMask2D* cgip_image;
 	cgip::CgipVolume* cgip_volume_down;
-	cgip::CgipMask** cgip_mask_down;
+	cgip::CgipMask* cgip_mask_down;
 
 	//TODO_CGIP: add pointers for class objects of functions
 	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
