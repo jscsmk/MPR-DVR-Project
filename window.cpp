@@ -732,6 +732,27 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	cgip_volume->setSpacingY(1);
 	cgip_volume->setSpacingZ(slice_thickness);
 
+	// downsample cgip_volume and cgip_mask
+	int down_ratio = 8;
+	int down_x = x / down_ratio;
+	int down_y = y / down_ratio;
+	cgip_volume_down = new CgipVolume(down_x, down_y, z);
+	cgip_mask_down = new CgipMask*[mask_count];
+	for (int m = 0; m < mask_count; m++)
+		cgip_mask_down[m] = new CgipMask(down_x, down_y, z);
+
+#pragma omp parallel for
+	for (int ijk = 0; ijk < down_x * down_y * z; ijk++) {
+		int k = ijk / (down_x * down_y);
+		int j = (ijk % (down_x * down_y)) / down_x;
+		int i = (ijk % (down_x * down_y)) % down_x;
+		cgip_volume_down->setVoxelValue(i, j, k, cgip_volume->getVoxelValue(
+			((CgipFloat)i * (x - 1)) / (down_x - 1),
+			((CgipFloat)j * (y - 1)) / (down_y - 1),
+			k
+		));
+	}
+
 	// set data_cube and slice_widget
 	data_cube->set_data(data_3d, x, y, z, slice_pixel_num_w, slice_pixel_num_h, a, b, slice_thickness, p_min, p_max);
 	data_cube->set_mask(mask_3d, mask_count);
@@ -1056,9 +1077,59 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 				//cgip_gc_2d->uncut();
 				function_started = 0;
 			}
-		}		
+		}
 	}
 	else if (this_function_mode == 7) { // graphcut 3d
+		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
+			if (click_type == 1) { // cut
+				function_started = 1;
+
+				int down_x = cgip_volume_down->getWidth();
+				int down_y = cgip_volume_down->getHeight();
+				int down_z = cgip_volume_down->getDepth();
+				int up_x = cgip_volume->getWidth();
+				int up_y = cgip_volume->getHeight();
+				int up_z = cgip_volume->getDepth();
+
+				// down-sample input mask
+#pragma omp parallel for
+				for (int ijk = 0; ijk < down_x * down_y * down_z; ijk++) {
+					int k = ijk / (down_x * down_y);
+					int j = (ijk % (down_x * down_y)) / down_x;
+					int i = (ijk % (down_x * down_y)) % down_x;
+					for (int m = 0; m < mask_count; m++) {
+						cgip_mask_down[m]->setVoxelValue(i, j, k, cgip_mask[m]->getVoxelValue(
+							((CgipFloat)i * (up_x - 1)) / (down_x - 1),
+							((CgipFloat)j * (up_y - 1)) / (down_y - 1),
+							((CgipFloat)k * (up_z - 1)) / (down_z - 1)
+						));
+					}
+				}
+
+				// apply 3d graph cut
+				cgip_gc_3d = new CgipGraphCut3D(cgip_volume_down, cgip_mask_down, mask_count);
+				cgip_gc_3d->cut();
+
+				// up-sample result mask
+#pragma omp parallel for
+				for (int ijk = 0; ijk < up_x * up_y * up_z; ijk++) {
+					int k = ijk / (up_x * up_y);
+					int j = (ijk % (up_x * up_y)) / up_x;
+					int i = (ijk % (up_x * up_y)) % up_x;
+					for (int m = 0; m < mask_count; m++) {
+						cgip_mask[m]->setVoxelValue(i, j, k, cgip_mask_down[m]->getVoxelValue(
+							((CgipFloat)i * (down_x - 1)) / (up_x - 1),
+							((CgipFloat)j * (down_y - 1)) / (up_y - 1),
+							((CgipFloat)k * (down_z - 1)) / (up_z - 1)
+						));
+					}
+				}
+			}
+			else { // uncut
+
+				function_started = 0;
+			}
+		}
 	}
 }
 void Window::mouse_moved(int slice_type, float x, float y, float z)

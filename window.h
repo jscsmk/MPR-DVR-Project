@@ -16,7 +16,7 @@
 #include "cgip_header/Common/CgipPoint.h"
 #include "cgip_header/Common/CgipVolume.h"
 #include "cgip_header/GraphCut/CgipGraphCut2D.h"
-//#include "cgip_header/GraphCut/CgipGraphCut3D.h"
+#include "cgip_header/GraphCut/CgipGraphCut3D.h"
 
 
 class QSignalMapper;
@@ -125,6 +125,8 @@ private:
 	cgip::CgipMask** cgip_mask;
 	cgip::CgipMask2D** cgip_maskimage;
 	cgip::CgipMask2D* cgip_image;
+	cgip::CgipVolume* cgip_volume_down;
+	cgip::CgipMask** cgip_mask_down;
 
 	//TODO_CGIP: add pointers for class objects of functions
 	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
@@ -137,6 +139,7 @@ private:
 	cgip::CgipCurve* cgip_curve;
 	cgip::CgipLiveWire* cgip_livewire;
 	cgip::CgipGraphCut2D *cgip_gc_2d;
+	cgip::CgipGraphCut3D *cgip_gc_3d;
 
 	float radius;
 	float smooth;
