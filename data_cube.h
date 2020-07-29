@@ -24,7 +24,8 @@ public:
 	short* get_cur_mask();
 	void get_slice(int slice_type, int *slice_data, int *mask_data);
 	tuple<float, float, float, int> get_coord(int slice_type, int m_x, int m_y);
-	tuple<int, int, float> get_line_info(int slice_type);
+	tuple<float, float, float> get_line_info(int slice_type);
+	tuple<float, float, float> get_slice_coord(int slice_type, float x, float y, float z);
 	int move_slice(int from, int target, float distance);
 	int rotate_slice(int slice_type, float a);
 	int move_center(int slice_type, float dx, float dy);
@@ -37,10 +38,11 @@ public:
 protected:
 	int trilinear_interpolation(int slice_type, float x, float y, float z);
 	tuple<int, int, int> closest_neighbor(float x, float y, float z);
+	tuple<float, float, float> get_projection(int slice_type, QVector3D P_target);
 
 private:
 	short *data_3d;							// 3d data points
-	short *mask_3d;						// 3d mask points
+	short *mask_3d;							// 3d mask points
 	int N_x, N_y, N_z, N_max, N_mask,		// size of total data
 		slice_pixel_num_w, slice_pixel_num_h, // number of pixels of slice
 		rescale_slope, rescale_intercept,	// dicom pixel rescale values

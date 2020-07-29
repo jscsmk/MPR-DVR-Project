@@ -19,6 +19,8 @@ public:
 	SliceWidget(int t, int s_w, int s_h);
 	void set_data(DataCube *d);
 	void set_mode(int m);
+	void set_radius(float r);
+	void draw_cursor(float coord_x, float coord_y, float coord_z, float r, int c);
 	void get_slice();
 	void apply_windowing();
 	void set_pixmap();
@@ -48,6 +50,7 @@ protected:
 	void wheelEvent(QWheelEvent *event) override;
 	void leaveEvent(QEvent *event) override;
 	void emit_coord_sig(int mouse_x, int mouse_y);
+	void _set_pixmap(int cursor_x, int cursor_y, float radius, int cursor_type);
 
 private:
 	DataCube *data_cube;
@@ -56,12 +59,13 @@ private:
 	QPixmap *blank_img, *loading_img;
 	int slice_type, mode, slice_size_w, slice_size_h, mask_count;
 	int pixel_num_w, pixel_num_h, rescale_slope, rescale_intercept, pixel_min, pixel_max;
-	int is_line_visible;
+	int is_line_visible, is_cursor_visible;
 	int is_line_mouseover_h, is_line_mouseover_v;
 	int line_clicked_v, line_clicked_h;
 	int mouse_last_x, mouse_last_y;
-	int line_x, line_y, line_x_scaled, line_y_scaled;
-	float line_angle_rad, mouse_last_a;
+	int mouse_cur_x, mouse_cur_y, m_cursor_type;
+	int line_x_scaled, line_y_scaled;
+	float line_angle_rad, mouse_last_a, m_radius;
 	float get_mouse_angle(int mouse_x, int mouse_y);
 	int window_level, window_width;
 	int window_changed, zoom_changed;

@@ -71,6 +71,7 @@ private slots:
 	void change_color_y(int c);
 	void update_slice(int slice_type);
 	void update_all_slice();
+	void update_cursors(int slice_type, float x, float y, float z);
 	tuple<int, int> get_function_status(int slice_type);
 	void update_coord(int slice_type, float x, float y, float z, int v);
 	void mouse_pressed(int slice_type, float x, float y, float z, int click_type);

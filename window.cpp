@@ -56,7 +56,7 @@ Window::Window(MainWindow *mw)
 
 	// add XYZ slice widgets
 	view_size_h = 600;
-	view_size_w = 600 * 7 / 4;
+	view_size_w = view_size_h * 7 / 4;
 	slice_widget_z = new SliceWidget(0, view_size_w, view_size_h);
 	slice_widget_x = new SliceWidget(1, view_size_w, view_size_h);
 	slice_widget_y = new SliceWidget(2, view_size_w, view_size_h);
@@ -454,6 +454,7 @@ void Window::change_function_mode_z(int m)
 	function_mode_z = m;
 	function_label_z->setText(get_function_label(function_mode_z));
 	slice_widget_z->set_mode(function_mode_z);
+	slice_widget_z->set_radius(radius);
 
 	// In case CgipMagicBrush
 	if (function_mode_z == 5) {
@@ -464,7 +465,7 @@ void Window::change_function_mode_z(int m)
 			int this_function_mode, this_function_color;
 			tie(this_function_mode, this_function_color) = get_function_status(0);
 			printf("num: %d ", this_function_color);
-			cgip_magic_brush = new CgipMagicBrush(30.0, 10.0, cgip_volume, cgip_mask);
+			cgip_magic_brush = new CgipMagicBrush(radius, 10.0, cgip_volume, cgip_mask);
 			printf("Created Magic Brush\n");
 		}
 	}
@@ -477,6 +478,7 @@ void Window::change_function_mode_x(int m)
 	function_mode_x = m;
 	function_label_x->setText(get_function_label(function_mode_x));
 	slice_widget_x->set_mode(function_mode_x);
+	slice_widget_x->set_radius(radius);
 }
 void Window::change_function_mode_y(int m)
 {
@@ -486,6 +488,7 @@ void Window::change_function_mode_y(int m)
 	function_mode_y = m;
 	function_label_y->setText(get_function_label(function_mode_y));
 	slice_widget_y->set_mode(function_mode_y);
+	slice_widget_y->set_radius(radius);
 }
 void Window::change_color_z(int c)
 {
@@ -907,6 +910,27 @@ void Window::update_all_slice()
 	slice_widget_x->get_slice();
 	slice_widget_y->get_slice();
 }
+void Window::update_cursors(int slice_type, float x, float y, float z)
+{
+	if (slice_type == 0) {
+		if (function_mode_z == 5) {
+			slice_widget_x->draw_cursor(x, y, z, radius, 2);
+			slice_widget_y->draw_cursor(x, y, z, radius, 2);
+		}
+	}
+	else if (slice_type == 1) {
+		if (function_mode_x == 5) {
+			slice_widget_z->draw_cursor(x, y, z, radius, 2);
+			slice_widget_y->draw_cursor(x, y, z, radius, 2);
+		}
+	}
+	else {
+		if (function_mode_y == 5) {
+			slice_widget_z->draw_cursor(x, y, z, radius, 2);
+			slice_widget_x->draw_cursor(x, y, z, radius, 2);
+		}
+	}
+}
 void Window::update_dvr_slices()
 {
 	/*
@@ -978,6 +1002,8 @@ void Window::update_coord(int slice_type, float x, float y, float z, int v)
 		coord_x->setText(msg);
 	else
 		coord_y->setText(msg);
+
+	update_cursors(slice_type, x, y, z);
 }
 void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_type)
 {
@@ -1112,6 +1138,8 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			}
 		}
 	}
+
+	update_cursors(slice_type, x, y, z);
 }
 void Window::mouse_moved(int slice_type, float x, float y, float z)
 {
@@ -1187,6 +1215,7 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 	}
 
 	update_all_slice();
+	update_cursors(slice_type, x, y, z);
 }
 void Window::wheel_changed(int slice_type, int key_type, int dir)
 {
@@ -1203,13 +1232,21 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 			radius = radius + (float)dir;
 			cgip_brush->setRadius(radius);
 			printf("radius: %f\n", radius);
+
+			slice_widget_z->set_radius(radius);
+			slice_widget_x->set_radius(radius);
+			slice_widget_y->set_radius(radius);
 		}
 		else if (this_function_mode == 5) { // magic brush
 			if (cgip_magic_brush) {
 				float r_mb = cgip_magic_brush->getRadius();
-				r_mb = r_mb + (float)dir;
-				cgip_magic_brush->setRadius(r_mb);
-				printf("radius: %f\n", r_mb);
+				radius = r_mb + (float)dir;
+				cgip_magic_brush->setRadius(radius);
+				printf("radius: %f\n", radius);
+
+				slice_widget_z->set_radius(radius);
+				slice_widget_x->set_radius(radius);
+				slice_widget_y->set_radius(radius);
 			}
 		}
 		else if (this_function_mode == 6) { // graphcut 2d
@@ -1227,26 +1264,7 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 		}
 	}
 	else if (key_type == 2) {
-		if (action == 0) {
-			action = 1;
-		}
-		else {
-			action = 0;
-		}
-
-		if (this_function_mode == 1) {
-			cgip_freedraw->setAction(action);
-		}
-		else if (this_function_mode == 2) {
-			cgip_brush->setAction(action);
-		}
-		else if (this_function_mode == 3) {
-			cgip_curve->setAction(action);
-		}
-		else if (this_function_mode == 4) {
-			cgip_livewire->setAction(action);
-		}
-		else if (this_function_mode == 5) { // magic brush
+		if (this_function_mode == 5) { // magic brush
 			if (cgip_magic_brush) {
 				float s = cgip_magic_brush->getSensitivity();
 				s = s + (float)dir;

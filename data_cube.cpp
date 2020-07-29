@@ -152,50 +152,69 @@ void DataCube::get_slice(int slice_type, int *slice_data, int *mask_data)
 	}
 }
 
-tuple<int, int, float> DataCube::get_line_info(int slice_type)
+tuple<float, float, float> DataCube::get_slice_coord(int slice_type, float x, float y, float z)
 {
-	int line_x, line_y;
-	float pr, pl, line_angle;
-	QVector3D temp, w, h, pr_w, pr_h;
+	QVector3D P_target(x, y, z);
+	return get_projection(slice_type, P_target);
+}
+
+tuple<float, float, float> DataCube::get_line_info(int slice_type)
+{
+	float line_x, line_y, line_angle;
+	QVector3D P_target = P_axis;
+
+	if (slice_type == 0) // z slice
+		line_angle = r_z;
+	else if (slice_type == 1) // x slice
+		line_angle = r_x;
+	else // y slice
+		line_angle = r_y;
+
+	tie(line_x, line_y, ignore) = get_projection(slice_type, P_target);
+	return { line_x, line_y, line_angle };
+}
+
+tuple<float, float, float> DataCube::get_projection(int slice_type, QVector3D P_target)
+{
+	float result_w, result_h, result_n, pr, pl;
+	QVector3D temp, w, h, n, pr_w, pr_h, pr_n;
 
 	if (slice_type == 0) { // z slice
-		temp = P_axis - qz;
+		temp = P_target - qz;
 		w = wz;
 		h = hz;
+		n = nz;
 		pl = pixel_len_z;
-		line_angle = r_z;
 	}
 	else if (slice_type == 1) { // x slice
-		temp = P_axis - qx;
+		temp = P_target - qx;
 		w = wx;
 		h = hx;
+		n = nx;
 		pl = pixel_len_x;
-		line_angle = r_x;
 	}
 	else { // y slice
-		temp = P_axis - qy;
+		temp = P_target - qy;
 		w = wy;
 		h = hy;
+		n = ny;
 		pl = pixel_len_y;
-		line_angle = r_y;
 	}
 
-	// get projection to w, h vector
+	// get projection to w, h, n vector
 	pr = QVector3D::dotProduct(w, temp);
 	pr_w = w * pr;
-	pr_h = temp - pr_w;
+	pr = QVector3D::dotProduct(h, temp);
+	pr_h = h * pr;
+	pr = QVector3D::dotProduct(n, temp);
+	pr_n = n * pr;
 
 	// length of each projection is coord of line
-	line_x = (int)(pr_w.length() / pl);
-	line_y = (int)(pr_h.length() / pl);
+	result_w = pr_w.length() / pl;
+	result_h = pr_h.length() / pl;
+	result_n = pr_n.length();
 
-	// check if negative
-	if (QVector3D::dotProduct(pr_w, w) < 0)
-		line_x *= -1;
-	if (QVector3D::dotProduct(pr_h, h) < 0)
-		line_y *= -1;
-
-	return {line_x, line_y, line_angle};
+	return { result_w, result_h, result_n };
 }
 
 int DataCube::trilinear_interpolation(int slice_type, float x, float y, float z)

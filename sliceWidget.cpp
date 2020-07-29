@@ -57,6 +57,12 @@ void SliceWidget::set_data(DataCube *d)
 	is_line_mouseover_h = 0;
 	is_line_mouseover_v = 0;
 
+	mouse_cur_x = 0;
+	mouse_cur_y = 0;
+	m_radius = 0;
+	m_cursor_type = 0;
+	is_cursor_visible = 0;
+
 	get_slice();
 }
 
@@ -67,6 +73,34 @@ void SliceWidget::set_mode(int m)
 	line_clicked_v = 0;
 	is_line_mouseover_h = 0;
 	is_line_mouseover_v = 0;
+
+	if (mode == 2 || mode == 5) // circle
+		m_cursor_type = 1;
+	//else if (mode == 6) // box // TODO
+	//	m_cursor_type = 2;
+}
+
+void SliceWidget::set_radius(float r)
+{
+	m_radius = r * slice_size_h / pixel_num_h;
+	set_pixmap();
+}
+
+void SliceWidget::draw_cursor(float coord_x, float coord_y, float coord_z, float r, int c)
+{
+	float temp_x, temp_y, temp_h, temp_r;
+	tie(temp_x, temp_y, temp_h) = data_cube->get_slice_coord(slice_type, coord_x, coord_y, coord_z);
+	if (temp_h * temp_h > r * r)
+		temp_r = 0;
+	else if (c == 2)
+		temp_r = r;
+	else
+		temp_r = sqrt(r * r - temp_h * temp_h);
+
+	temp_x = temp_x * slice_size_h / pixel_num_h;
+	temp_y = temp_y * slice_size_h / pixel_num_h;
+	temp_r = temp_r * slice_size_h / pixel_num_h;
+	_set_pixmap((int)temp_x, (int)temp_y, temp_r, c);
 }
 
 void SliceWidget::get_slice()
@@ -152,7 +186,11 @@ void SliceWidget::toggle_border_line()
 
 void SliceWidget::set_pixmap()
 {
+	_set_pixmap(mouse_cur_x, mouse_cur_y, m_radius, m_cursor_type * is_cursor_visible);
+}
 
+void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, int cursor_type)
+{
 	if (mode < 0) {
 		this->setPixmap(blank_img->scaled(slice_size_w, slice_size_h));
 		return;
@@ -162,15 +200,14 @@ void SliceWidget::set_pixmap()
 	*img_buffer = img_buffer->scaled(slice_size_w, slice_size_h);
 
 	// draw line
+	QPainter *painter = new QPainter(img_buffer);
 	if (is_line_visible == 1) {
-		QPainter *painter = new QPainter(img_buffer);
 		QLineF angleline;
-		float line_angle_deg;
-
+		float line_x, line_y, line_angle_deg;
 		tie(line_x, line_y, line_angle_rad) = data_cube->get_line_info(slice_type);
 		line_angle_deg = line_angle_rad * -180 / PI;
-		line_x_scaled = line_x * slice_size_h / pixel_num_h;
-		line_y_scaled = line_y * slice_size_h / pixel_num_h;
+		line_x_scaled = (int)(line_x * slice_size_h / pixel_num_h);
+		line_y_scaled = (int)(line_y * slice_size_h / pixel_num_h);
 		angleline.setP1(QPointF(line_x_scaled, line_y_scaled));
 		angleline.setLength(4 * slice_size_h);
 
@@ -222,13 +259,26 @@ void SliceWidget::set_pixmap()
 		painter->drawLine(angleline);
 		angleline.setAngle(line_angle_deg + 180);
 		painter->drawLine(angleline);
-		painter->end();
+	}
 
-		//free(painter);
+	// draw mouse cursor
+	if (mode * cursor_type > 0) {
+		float pl;
+		tie(ignore, ignore, ignore, ignore, ignore, pl) = data_cube->get_MPR_info(slice_type);
+
+		painter->setPen(QPen(Qt::white, 1));
+		QRect rect(0, 0, (int)(2 * radius / pl), (int)(2 * radius / pl));
+		rect.moveCenter(QPoint(cursor_x, cursor_y));
+
+		if (cursor_type == 1) // circle
+			painter->drawEllipse(rect);
+		else if (cursor_type == 2) // square
+			painter->drawRect(rect);
 	}
 
 	// set pixmap
 	this->setPixmap(*img_buffer);
+	painter->end();
 
 	//free(img);
 	//free(img_buffer);
@@ -263,6 +313,7 @@ void SliceWidget::leaveEvent(QEvent *event)
 	line_clicked_v = 0;
 	is_line_mouseover_h = 0;
 	is_line_mouseover_v = 0;
+	is_cursor_visible = 0;
 
 	set_pixmap();
 }
@@ -387,9 +438,10 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 	if (mouse_y >= slice_size_h)
 		mouse_y = slice_size_h - 1;
 
-	float mouse_angle_rad = get_mouse_angle(mouse_x, mouse_y);
+	emit_coord_sig(mouse_x, mouse_y);
 
 	// get angle diff
+	float mouse_angle_rad = get_mouse_angle(mouse_x, mouse_y);
 	float angle_diff_h, angle_diff_v;
 	angle_diff_h = fabs(line_angle_rad - mouse_angle_rad);
 	if (angle_diff_h > PI)
@@ -398,6 +450,15 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		angle_diff_h = PI - angle_diff_h;
 
 	angle_diff_v = PI / 2 - angle_diff_h;
+
+	// draw cursor
+	if (mode > 0) {
+		is_cursor_visible = 1;
+		mouse_cur_x = mouse_x;
+		mouse_cur_y = mouse_y;
+		set_pixmap();
+		return;
+	}
 
 	// check if mouse is on the line
 	int line_mouseover_v, line_mouseover_h;
@@ -418,12 +479,6 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 			set_pixmap();
 		}
 	}
-
-	emit_coord_sig(mouse_x, mouse_y);
-
-	// mouse click event
-	if (mode != 0)
-		return;
 
 	if (event->buttons() & Qt::LeftButton) // when left clicked
 	{
