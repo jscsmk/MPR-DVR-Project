@@ -27,6 +27,7 @@
 #include <QAction>
 #include <QMenu>
 #include <string>
+#include <time.h>
 
 #include "gdcmImageReader.h"
 #include "gdcmReader.h"
@@ -716,6 +717,11 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	radius = 10;
 	action = 1;
 	smooth = 1;
+	cutModel = 1;
+	intensityModel = 3;
+
+	alpha = 1.0;
+	bkg_val = 100;
 
 	cgip_volume->setSpacingX(1);
 	cgip_volume->setSpacingY(1);
@@ -1075,45 +1081,32 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			if (click_type == 1) { // cut
 				function_started = 1;
 
+				/*
 				int down_x = cgip_volume_down->getWidth();
 				int down_y = cgip_volume_down->getHeight();
 				int down_z = cgip_volume_down->getDepth();
 				int up_x = cgip_volume->getWidth();
 				int up_y = cgip_volume->getHeight();
 				int up_z = cgip_volume->getDepth();
+				*/
 
-				// down-sample input mask
-#pragma omp parallel for
-				for (int ijk = 0; ijk < down_x * down_y * down_z; ijk++) {
-					int k = ijk / (down_x * down_y);
-					int j = (ijk % (down_x * down_y)) / down_x;
-					int i = (ijk % (down_x * down_y)) % down_x;
+				clock_t total_1 = clock();
+				clock_t t2;
 
-					cgip_mask_down->setVoxelValue(i, j, k, cgip_mask->getVoxelValue(
-						((CgipFloat)i * (up_x - 1)) / (down_x - 1),
-						((CgipFloat)j * (up_y - 1)) / (down_y - 1),
-						((CgipFloat)k * (up_z - 1)) / (down_z - 1)
-					));
-				}
+				printf("intensity model: %d\n", intensityModel);
 
-				// apply 3d graph cut
-				cgip_gc_3d = new CgipGraphCut3D(cgip_volume_down, cgip_mask_down, mask_count);
-				cgip_gc_3d->cut();
+				// apply 3d graph cut (volume, mask, mask_count, intensityModel, alpha, iter, bkg_prob)
+				// cgip_gc_3d = new CgipGraphCut3D(cgip_volume_down, cgip_mask_down, mask_count, intensityModel, alpha, 2, bkg_val);
+				cgip_grid_3d = new CgipGridCut(cgip_volume, cgip_mask, intensityModel, bkg_val, alpha);
+				cgip_grid_3d->cut3d(4);
 
-				// up-sample result mask
-#pragma omp parallel for
-				for (int ijk = 0; ijk < up_x * up_y * up_z; ijk++) {
-					int k = ijk / (up_x * up_y);
-					int j = (ijk % (up_x * up_y)) / up_x;
-					int i = (ijk % (up_x * up_y)) % up_x;
-					cgip_mask->setVoxelValue(i, j, k, cgip_mask_down->getVoxelValue(
-						((CgipFloat)i * (down_x - 1)) / (up_x - 1),
-						((CgipFloat)j * (down_y - 1)) / (up_y - 1),
-						((CgipFloat)k * (down_z - 1)) / (up_z - 1)
-					));
-				}
+				t2 = clock();
+				printf(">> total: %f\n", (float)(t2 - total_1) / CLOCKS_PER_SEC);
 			}
 			else { // uncut
+				printf("[uncut]\n");
+				//cgip_gc_3d->uncut();
+				cgip_grid_3d->uncut3d();
 
 				function_started = 0;
 			}
@@ -1223,7 +1216,14 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 
 		}
 		else if (this_function_mode == 7) { // graphcut 3d
+			if (intensityModel == 1)
+				intensityModel = 2;
+			else if (intensityModel == 2)
+				intensityModel = 3;
+			else if (intensityModel == 3)
+				intensityModel = 1;
 
+			printf("intensity model: %d\n", intensityModel);
 		}
 	}
 	else if (key_type == 2) {
@@ -1253,6 +1253,11 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				cgip_magic_brush->setSensitivity(s);
 				printf("sensitivity: %f\n", s);
 			}
+		}
+		else if (this_function_mode == 7) {
+			alpha += (0.2 * (int)dir);
+
+			printf("alpha: %f\n", alpha);
 		}
 	}
 }

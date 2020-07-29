@@ -17,6 +17,7 @@
 #include "cgip_header/Common/CgipVolume.h"
 #include "cgip_header/GraphCut/CgipGraphCut2D.h"
 #include "cgip_header/GraphCut/CgipGraphCut3D.h"
+#include "cgip_header/GraphCut/CgipGridCut.h"
 
 
 class QSignalMapper;
@@ -140,10 +141,14 @@ private:
 	cgip::CgipLiveWire* cgip_livewire;
 	cgip::CgipGraphCut2D *cgip_gc_2d;
 	cgip::CgipGraphCut3D *cgip_gc_3d;
+	cgip::CgipGridCut* cgip_grid_3d;
 
 	float radius;
 	float smooth;
 	int action;
+	int cutModel, intensityModel;
+	float alpha;
+	int bkg_val;
 };
 
 #endif
