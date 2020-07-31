@@ -60,6 +60,7 @@ void SliceWidget::set_data(DataCube *d)
 	mouse_cur_x = 0;
 	mouse_cur_y = 0;
 	m_radius = 0;
+	m_box_radius = 0;
 	m_cursor_type = 0;
 	is_cursor_visible = 0;
 
@@ -76,8 +77,8 @@ void SliceWidget::set_mode(int m)
 
 	if (mode == 2 || mode == 5) // circle
 		m_cursor_type = 1;
-	//else if (mode == 6) // box // TODO
-	//	m_cursor_type = 2;
+	else if (mode == 8) // box + circle
+		m_cursor_type = 2;
 }
 
 void SliceWidget::set_radius(float r)
@@ -85,22 +86,25 @@ void SliceWidget::set_radius(float r)
 	m_radius = r * slice_size_h / pixel_num_h;
 	set_pixmap();
 }
-
-void SliceWidget::draw_cursor(float coord_x, float coord_y, float coord_z, float r, int c)
+void SliceWidget::set_box_radius(float r)
 {
-	float temp_x, temp_y, temp_h, temp_r;
+	m_box_radius = r * slice_size_h / pixel_num_h;
+	set_pixmap();
+}
+
+void SliceWidget::draw_cursor(float coord_x, float coord_y, float coord_z, float r, float b, int c)
+{
+	float temp_x, temp_y, temp_h, temp_r, temp_b;
 	tie(temp_x, temp_y, temp_h) = data_cube->get_slice_coord(slice_type, coord_x, coord_y, coord_z);
-	if (temp_h * temp_h > r * r)
-		temp_r = 0;
-	else if (c == 2)
-		temp_r = r;
-	else
-		temp_r = sqrt(r * r - temp_h * temp_h);
+	temp_r = sqrt(min((float)0, r * r - temp_h * temp_h));
+	if (c == 2)
+		temp_b = (temp_h * temp_h > b * b) ? 0 : b;
 
 	temp_x = temp_x * slice_size_h / pixel_num_h;
 	temp_y = temp_y * slice_size_h / pixel_num_h;
 	temp_r = temp_r * slice_size_h / pixel_num_h;
-	_set_pixmap((int)temp_x, (int)temp_y, temp_r, c);
+	temp_b = temp_b * slice_size_h / pixel_num_h;
+	_set_pixmap((int)temp_x, (int)temp_y, temp_r, temp_b, c);
 }
 
 void SliceWidget::get_slice()
@@ -186,10 +190,10 @@ void SliceWidget::toggle_border_line()
 
 void SliceWidget::set_pixmap()
 {
-	_set_pixmap(mouse_cur_x, mouse_cur_y, m_radius, m_cursor_type * is_cursor_visible);
+	_set_pixmap(mouse_cur_x, mouse_cur_y, m_radius, m_box_radius, m_cursor_type * is_cursor_visible);
 }
 
-void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, int cursor_type)
+void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, float box_radius, int cursor_type)
 {
 	if (mode < 0) {
 		this->setPixmap(blank_img->scaled(slice_size_w, slice_size_h));
@@ -266,14 +270,17 @@ void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, int curs
 		float pl;
 		tie(ignore, ignore, ignore, ignore, ignore, pl) = data_cube->get_MPR_info(slice_type);
 
-		painter->setPen(QPen(Qt::white, 1));
+		painter->setPen(QPen(Qt::white, 2));
 		QRect rect(0, 0, (int)(2 * radius / pl), (int)(2 * radius / pl));
 		rect.moveCenter(QPoint(cursor_x, cursor_y));
+		painter->drawEllipse(rect);
 
-		if (cursor_type == 1) // circle
-			painter->drawEllipse(rect);
-		else if (cursor_type == 2) // square
-			painter->drawRect(rect);
+		if (cursor_type == 2) { // draw roi box
+			painter->setPen(QPen(Qt::gray, 1));
+			QRect rect2(0, 0, (int)(2 * box_radius / pl), (int)(2 * box_radius / pl));
+			rect2.moveCenter(QPoint(cursor_x, cursor_y));
+			painter->drawRect(rect2);
+		}
 	}
 
 	// set pixmap

@@ -20,7 +20,8 @@ public:
 	void set_data(DataCube *d);
 	void set_mode(int m);
 	void set_radius(float r);
-	void draw_cursor(float coord_x, float coord_y, float coord_z, float r, int c);
+	void set_box_radius(float r);
+	void draw_cursor(float coord_x, float coord_y, float coord_z, float r, float b, int c);
 	void get_slice();
 	void apply_windowing();
 	void set_pixmap();
@@ -50,7 +51,7 @@ protected:
 	void wheelEvent(QWheelEvent *event) override;
 	void leaveEvent(QEvent *event) override;
 	void emit_coord_sig(int mouse_x, int mouse_y);
-	void _set_pixmap(int cursor_x, int cursor_y, float radius, int cursor_type);
+	void _set_pixmap(int cursor_x, int cursor_y, float radius, float box_radius, int cursor_type);
 
 private:
 	DataCube *data_cube;
@@ -65,7 +66,7 @@ private:
 	int mouse_last_x, mouse_last_y;
 	int mouse_cur_x, mouse_cur_y, m_cursor_type;
 	int line_x_scaled, line_y_scaled;
-	float line_angle_rad, mouse_last_a, m_radius;
+	float line_angle_rad, mouse_last_a, m_radius, m_box_radius;
 	float get_mouse_angle(int mouse_x, int mouse_y);
 	int window_level, window_width;
 	int window_changed, zoom_changed;

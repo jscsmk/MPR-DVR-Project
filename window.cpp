@@ -455,6 +455,7 @@ void Window::change_function_mode_z(int m)
 	function_label_z->setText(get_function_label(function_mode_z));
 	slice_widget_z->set_mode(function_mode_z);
 	slice_widget_z->set_radius(radius);
+	slice_widget_z->set_box_radius(box_radius);
 
 	// In case CgipMagicBrush
 	if (function_mode_z == 5) {
@@ -469,6 +470,23 @@ void Window::change_function_mode_z(int m)
 			printf("Created Magic Brush\n");
 		}
 	}
+	else if (function_mode_z == 8) {
+		change_function_mode_x(8);
+		change_function_mode_y(8);
+
+		if (cgip_gc_brush == nullptr) {
+			int this_function_mode, this_function_color;
+			tie(this_function_mode, this_function_color) = get_function_status(0);
+
+			QVector3D s, r, d;
+			int w, h;
+			float pl;
+			tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(0);
+			cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
+			cgip_gc_brush = new CgipGraphCutBrush(this_function_color, radius, box_radius, cgip_mprmod, cgip_mask, cgip_volume);
+			printf("Created GC Brush\n");
+		}
+	}
 }
 void Window::change_function_mode_x(int m)
 {
@@ -479,6 +497,7 @@ void Window::change_function_mode_x(int m)
 	function_label_x->setText(get_function_label(function_mode_x));
 	slice_widget_x->set_mode(function_mode_x);
 	slice_widget_x->set_radius(radius);
+	slice_widget_x->set_box_radius(box_radius);
 }
 void Window::change_function_mode_y(int m)
 {
@@ -489,6 +508,7 @@ void Window::change_function_mode_y(int m)
 	function_label_y->setText(get_function_label(function_mode_y));
 	slice_widget_y->set_mode(function_mode_y);
 	slice_widget_y->set_radius(radius);
+	slice_widget_y->set_box_radius(box_radius);
 }
 void Window::change_color_z(int c)
 {
@@ -718,6 +738,7 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	cgip_mask = new CgipMask(x, y, z, mask_3d);
 
 	radius = 10;
+	box_radius = 30;
 	action = 1;
 	smooth = 1;
 	cutModel = 1;
@@ -914,20 +935,32 @@ void Window::update_cursors(int slice_type, float x, float y, float z)
 {
 	if (slice_type == 0) {
 		if (function_mode_z == 5) {
-			slice_widget_x->draw_cursor(x, y, z, radius, 2);
-			slice_widget_y->draw_cursor(x, y, z, radius, 2);
+			slice_widget_x->draw_cursor(x, y, z, radius, 0, 1);
+			slice_widget_y->draw_cursor(x, y, z, radius, 0, 1);
+		}
+		else if (function_mode_z == 8) {
+			slice_widget_x->draw_cursor(x, y, z, radius, box_radius, 2);
+			slice_widget_y->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
 	}
 	else if (slice_type == 1) {
 		if (function_mode_x == 5) {
-			slice_widget_z->draw_cursor(x, y, z, radius, 2);
-			slice_widget_y->draw_cursor(x, y, z, radius, 2);
+			slice_widget_z->draw_cursor(x, y, z, radius, 0, 1);
+			slice_widget_y->draw_cursor(x, y, z, radius, 0, 1);
+		}
+		else if (function_mode_x == 8) {
+			slice_widget_z->draw_cursor(x, y, z, radius, box_radius, 2);
+			slice_widget_y->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
 	}
 	else {
 		if (function_mode_y == 5) {
-			slice_widget_z->draw_cursor(x, y, z, radius, 2);
-			slice_widget_x->draw_cursor(x, y, z, radius, 2);
+			slice_widget_z->draw_cursor(x, y, z, radius, 0, 1);
+			slice_widget_x->draw_cursor(x, y, z, radius, 0, 1);
+		}
+		else if (function_mode_y == 8) {
+			slice_widget_z->draw_cursor(x, y, z, radius, box_radius, 2);
+			slice_widget_x->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
 	}
 }
@@ -1028,7 +1061,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	QVector3D s, r, d;
 	int w, h;
 	float pl;
-	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0) || this_function_mode >= 6) {
+	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0) || this_function_mode == 6 || this_function_mode == 7) {
 		tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(slice_type);
 		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
 	}
@@ -1138,6 +1171,13 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			}
 		}
 	}
+	else if (this_function_mode == 8) { // gc brush
+		if (cgip_gc_brush) {
+			cgip_gc_brush->cut3d(CgipPoint(x, y, z / slice_thickness));
+			update_all_slice();
+			function_started = 1;
+		}
+	}
 
 	update_cursors(slice_type, x, y, z);
 }
@@ -1173,6 +1213,12 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 	else if (this_function_mode == 5) { // Magic brush
 		if (cgip_magic_brush) {
 			cgip_magic_brush->moveBrush(CgipPoint(x, y, z / slice_thickness));
+			update_all_slice();
+		}
+	}
+	else if (this_function_mode == 8) { // gc brush
+		if (cgip_gc_brush) {
+			cgip_gc_brush->cut3d(CgipPoint(x, y, z / slice_thickness));
 			update_all_slice();
 		}
 	}
@@ -1212,6 +1258,9 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 			cgip_magic_brush->endBrush(CgipPoint(x, y, z / slice_thickness));
 			function_started = 0;
 		}
+	}
+	else if (this_function_mode == 8) { // gc brush
+		function_started = 0;
 	}
 
 	update_all_slice();
@@ -1262,6 +1311,22 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 
 			printf("intensity model: %d\n", intensityModel);
 		}
+		else if (this_function_mode == 8) { // gc brush
+			if (cgip_gc_brush) {
+				float r_gcb = cgip_gc_brush->getRadius();
+				float r_b_gcb = cgip_gc_brush->getBoxRadius();
+				radius = r_gcb + (float)dir;
+				radius = min(radius, r_b_gcb / 2);
+				radius = max(radius, 2.0f);
+
+				cgip_gc_brush->setRadius(radius);
+				printf("radius: %f\n", radius);
+
+				slice_widget_z->set_radius(radius);
+				slice_widget_x->set_radius(radius);
+				slice_widget_y->set_radius(radius);
+			}
+		}
 	}
 	else if (key_type == 2) {
 		if (this_function_mode == 5) { // magic brush
@@ -1276,6 +1341,21 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 			alpha += (0.2 * (int)dir);
 
 			printf("alpha: %f\n", alpha);
+		}
+		else if (this_function_mode == 8) { // gc brush
+			if (cgip_gc_brush) {
+				float r_gcb = cgip_gc_brush->getRadius();
+				float r_b_gcb = cgip_gc_brush->getBoxRadius();
+				box_radius = r_b_gcb + (float)dir;
+				box_radius = max(box_radius, r_gcb * 2);
+				box_radius = min(box_radius, 100.0f);
+
+				cgip_gc_brush->setBoxRadius(box_radius);
+
+				slice_widget_z->set_box_radius(box_radius);
+				slice_widget_x->set_box_radius(box_radius);
+				slice_widget_y->set_box_radius(box_radius);
+			}
 		}
 	}
 }
