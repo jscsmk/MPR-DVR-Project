@@ -113,7 +113,7 @@ private:
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
 	static const int n_functions = 9;
-	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire" , "magic brush", "graphcut 2d", "graphcut 3d"}, "graphcut brush";
+	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire", "magic brush", "graphcut 2d", "graphcut 3d", "graphcut brush"};
 	QString color_list[8] = { "eraser.png", "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
