@@ -214,6 +214,12 @@ tuple<float, float, float> DataCube::get_projection(int slice_type, QVector3D P_
 	result_h = pr_h.length() / pl;
 	result_n = pr_n.length();
 
+	// check if negative
+	if (QVector3D::dotProduct(w, temp) < 0)
+		result_w *= -1;
+	if (QVector3D::dotProduct(h, temp) < 0)
+		result_h *= -1;
+
 	return { result_w, result_h, result_n };
 }
 

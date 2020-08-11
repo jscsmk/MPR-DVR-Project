@@ -17,6 +17,7 @@ MainWindow::MainWindow()
 	*/
 
 	onAddNew();
+	this->setWindowFlags(this->windowFlags() | Qt::MSWindowsFixedSizeDialogHint);
 }
 
 void MainWindow::onAddNew()

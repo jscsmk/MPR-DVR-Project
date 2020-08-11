@@ -713,9 +713,10 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	free(mask_3d);
 	mask_3d = new short[z * x * y]();
 
-	int slice_pixel_num_h = 512;
-	int slice_pixel_num_w = 512 * 7 / 4;
-	int dvr_pixel_num = 512;
+	int pl = 512;
+	int slice_pixel_num_h = pl;
+	int slice_pixel_num_w = pl * 7 / 4;
+	int dvr_pixel_num = pl;
 	float unit_ray_len = 1;
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
@@ -1173,6 +1174,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	}
 	else if (this_function_mode == 8) { // gc brush
 		if (cgip_gc_brush) {
+			cgip_gc_brush->setAction(this_function_color);
 			cgip_gc_brush->cut3d(CgipPoint(x, y, z / slice_thickness));
 			update_all_slice();
 			function_started = 1;

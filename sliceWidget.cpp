@@ -279,7 +279,7 @@ void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, float bo
 			painter->setPen(QPen(Qt::gray, 1));
 			QRect rect2(0, 0, (int)(2 * box_radius / pl), (int)(2 * box_radius / pl));
 			rect2.moveCenter(QPoint(cursor_x, cursor_y));
-			painter->drawRect(rect2);
+			painter->drawEllipse(rect2);
 		}
 	}
 
