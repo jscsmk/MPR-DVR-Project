@@ -100,15 +100,10 @@ void SliceWidget::draw_cursor(float coord_x, float coord_y, float coord_z, float
 	tie(temp_x, temp_y, temp_h) = data_cube->get_slice_coord(slice_type, coord_x, coord_y, coord_z);
 	temp_r = sqrt(max((float)0, r * r - temp_h * temp_h));
 	temp_b = sqrt(max((float)0, b * b - temp_h * temp_h));
-	//temp_b = 0;
-	//if (c == 2)
-	//		temp_b = (temp_h * temp_h > b * b) ? 0 : b;
-
 	temp_x = temp_x * slice_size_h / pixel_num_h;
 	temp_y = temp_y * slice_size_h / pixel_num_h;
 	temp_r = temp_r * slice_size_h / pixel_num_h;
 	temp_b = temp_b * slice_size_h / pixel_num_h;
-	printf("%f, %f, %f, %f, %d\n", r, b, temp_r, temp_b, c);
 	_set_pixmap((int)temp_x, (int)temp_y, temp_r, temp_b, c);
 }
 

@@ -128,6 +128,7 @@ private:
 	cgip::CgipFreeDraw* cgip_freedraw;
 	cgip::CgipCurve* cgip_curve;
 	cgip::CgipLiveWire* cgip_livewire;
+	cgip::CgipGridCut* cgip_grid_2d;
 	cgip::CgipGridCut* cgip_grid_3d;
 	cgip::CgipGraphCutBrush* cgip_gc_brush = nullptr;
 
@@ -137,6 +138,8 @@ private:
 	int cutModel, intensityModel;
 	float alpha;
 	int bkg_val;
+
+	std::string str_path;
 };
 
 #endif

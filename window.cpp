@@ -36,26 +36,21 @@
 #include "gdcmAttribute.h"
 #include "sliceWidget.h"
 
+#define NOMINMAX
+#include <Windows.h>
+#include <iostream>
+#include <filesystem>
 
 //TOGO_CGIP: using namespace cgip;
 using namespace cgip;
+namespace fs = std::experimental::filesystem;
+
 
 Window::Window(MainWindow *mw)
 	: main_window(mw)
 {
-	/*
-	// set black background
-	QPalette pal = palette();
-	pal.setColor(QPalette::Background, Qt::black);
-	this->setAutoFillBackground(true);
-	this->setPalette(pal);
-
-
-	w_browser->setVisible(false);
-	*/
-
 	// add XYZ slice widgets
-	view_size_h = 600;
+	view_size_h = 440;
 	view_size_w = view_size_h * 7 / 4;
 	slice_widget_z = new SliceWidget(0, view_size_w, view_size_h);
 	slice_widget_x = new SliceWidget(1, view_size_w, view_size_h);
@@ -79,7 +74,15 @@ Window::Window(MainWindow *mw)
 	mask_count = 7;
 
 	// add local file browser
-	QString root_path = "";
+	// Find exe path to load opencl files
+	TCHAR path[MAX_PATH];
+	GetModuleFileName(NULL, path, MAX_PATH);
+	wstring wstr_path(&path[0]);
+	str_path = std::string(wstr_path.begin(), wstr_path.end());
+	std::size_t idx = str_path.find_last_of('\\');
+	str_path = str_path.substr(0, idx) + "\\data";
+
+	QString root_path(str_path.c_str());
 	//QString root_path = "c:/vscode_workspace/data";
 
 	model = new QFileSystemModel();
@@ -98,9 +101,8 @@ Window::Window(MainWindow *mw)
 	for (int i = 1; i < model->columnCount(); ++i)
 		tree->hideColumn(i);
 
-	hideBtn = new QPushButton(tr("<"), this);
-	hideBtn->setFixedSize(20, 100);
-
+	//hideBtn = new QPushButton(tr("<"), this);
+	//hideBtn->setFixedSize(20, 100);
 
 	// add menubar for MPR
 	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;
@@ -282,7 +284,7 @@ Window::Window(MainWindow *mw)
 
 	// add connections
 	connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(get_path()));
-	connect(hideBtn, &QPushButton::clicked, this, &Window::hide_tree);
+	//connect(hideBtn, &QPushButton::clicked, this, &Window::hide_tree);
 
 	connect(toggle_slice_line_z, &QAction::triggered, slice_widget_z, &SliceWidget::toggle_slice_line);
 	connect(toggle_slice_line_x, &QAction::triggered, slice_widget_x, &SliceWidget::toggle_slice_line);
@@ -361,17 +363,17 @@ Window::Window(MainWindow *mw)
 
 	// set layout
 	mainLayout = new QHBoxLayout;
-	QVBoxLayout *container_1 = new QVBoxLayout;
+	//QVBoxLayout *container_1 = new QVBoxLayout;
 	QVBoxLayout *container_2 = new QVBoxLayout;
 	container_3 = new QVBoxLayout;
 
-	w_browser = new QWidget;
+	//w_browser = new QWidget;
 
-	container_1->addWidget(selected);
-	container_1->addWidget(tree);
-	container_1->setMargin(0);
-	w_browser->setLayout(container_1);
-	w_browser->setFixedWidth(280);
+	//container_1->addWidget(selected);
+	//container_1->addWidget(tree);
+	//container_1->setMargin(0);
+	//w_browser->setLayout(container_1);
+	//w_browser->setFixedWidth(280);
 
 	container_2->addWidget(menubar_z);
 	container_2->addWidget(slice_widget_z);
@@ -398,14 +400,16 @@ Window::Window(MainWindow *mw)
 	container_3->setSpacing(0);
 	container_3->setMargin(0);
 
-	mainLayout->addWidget(w_browser);
-	mainLayout->addWidget(hideBtn);
+	//mainLayout->addWidget(w_browser);
+	//mainLayout->addWidget(hideBtn);
 	mainLayout->addLayout(container_2);
 	mainLayout->addLayout(container_3);
 
 	setLayout(mainLayout);
 	this->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
 	setWindowTitle(tr("Hello GL"));
+
+	get_path();
 }
 
 void Window::hide_tree()
@@ -539,11 +543,11 @@ void Window::change_color_y(int c)
 
 void Window::get_path()
 {
+	/*
 	QModelIndex index = tree->currentIndex();
 	QString cur_path = model->filePath(index);
 	QModelIndex p_idx = model->index(cur_path);
 
-	/*
 	if (!tree->isExpanded(index)) {
 		connect(tree, SIGNAL(expanded(index)), loop_1, SLOT(quit()));
 		connect(model, SIGNAL(directoryLoaded(QString)), loop_1, SLOT(quit()));
@@ -555,15 +559,16 @@ void Window::get_path()
 	*/
 
 	int num_rows, img_count, img_w, img_h, diff_count, rescale_intercept, rescale_slope;
-	num_rows = model->rowCount(p_idx);
+	//num_rows = model->rowCount(p_idx);
 	diff_count = 0;
 	img_count = 0;
 	img_w = -1;
 	img_h = -1;
 
-	selected->setText("Path: " + cur_path);
+	//selected->setText("Path: " + cur_path);
 	file_list = {};
 
+	/*
 	for (int i = 0; i < num_rows; ++i) {
 		QModelIndex childIndex = model->index(i, 0, p_idx);
 		QString file_name = model->data(childIndex).toString();
@@ -571,6 +576,11 @@ void Window::get_path()
 		QString file_path = cur_path + "/" + file_name;
 
 		if (fi.suffix() == "dcm" || fi.suffix() == "DCM") {
+	*/
+	for (const auto & entry : fs::directory_iterator(str_path)) {
+		QString file_path(entry.path().string().c_str());
+
+		if (1) {
 			file_list.append(file_path);
 			img_count++;
 
@@ -1109,13 +1119,16 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			update_all_slice();
 			function_started = 1;
 		}
-	}	
+	}
 	else if (this_function_mode == 6) { // graphcut 2d
 		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
 			if (click_type == 1) { // cut
 				//cgip_gc_2d = new CgipGraphCut2D(cgip_volume, cgip_mask, mask_count);
 				//cgip_gc_2d->set_data(cgip_mprmod);
 				//cgip_gc_2d->cut();
+
+				cgip_grid_2d = new CgipGridCut(cgip_volume, cgip_mask, 3, bkg_val, alpha);
+				cgip_grid_2d->cut2d(cgip_mprmod);
 				function_started = 1;
 			}
 			else { // uncut
