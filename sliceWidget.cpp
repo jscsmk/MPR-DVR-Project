@@ -79,6 +79,8 @@ void SliceWidget::set_mode(int m)
 		m_cursor_type = 1;
 	else if (mode == 8) // box + circle
 		m_cursor_type = 2;
+	else
+		m_cursor_type = 0;
 }
 
 void SliceWidget::set_radius(float r)
@@ -96,14 +98,17 @@ void SliceWidget::draw_cursor(float coord_x, float coord_y, float coord_z, float
 {
 	float temp_x, temp_y, temp_h, temp_r, temp_b;
 	tie(temp_x, temp_y, temp_h) = data_cube->get_slice_coord(slice_type, coord_x, coord_y, coord_z);
-	temp_r = sqrt(min((float)0, r * r - temp_h * temp_h));
-	if (c == 2)
-		temp_b = (temp_h * temp_h > b * b) ? 0 : b;
+	temp_r = sqrt(max((float)0, r * r - temp_h * temp_h));
+	temp_b = sqrt(max((float)0, b * b - temp_h * temp_h));
+	//temp_b = 0;
+	//if (c == 2)
+	//		temp_b = (temp_h * temp_h > b * b) ? 0 : b;
 
 	temp_x = temp_x * slice_size_h / pixel_num_h;
 	temp_y = temp_y * slice_size_h / pixel_num_h;
 	temp_r = temp_r * slice_size_h / pixel_num_h;
 	temp_b = temp_b * slice_size_h / pixel_num_h;
+	printf("%f, %f, %f, %f, %d\n", r, b, temp_r, temp_b, c);
 	_set_pixmap((int)temp_x, (int)temp_y, temp_r, temp_b, c);
 }
 
@@ -283,6 +288,25 @@ void SliceWidget::_set_pixmap(int cursor_x, int cursor_y, float radius, float bo
 		}
 	}
 
+	// draw points
+	if (mode == 3 || mode == 4) {
+		painter->setPen(QPen(Qt::red, 1));
+		painter->setBrush(QBrush(Qt::red));
+		int point_count = m_points_x.size();
+		for (int i = 0; i < point_count; i++) {
+			QRect pt(0, 0, 3, 3);
+			pt.moveCenter(QPoint(m_points_x[i], m_points_y[i]));
+			painter->drawEllipse(pt);
+		}
+	}
+	else if (mode == 1) {
+		painter->setPen(QPen(Qt::red, 1));
+		int point_count = m_points_x.size();
+		for (int i = 0; i < point_count - 1; i++) {
+			painter->drawLine(QPoint(m_points_x[i], m_points_y[i]), QPoint(m_points_x[i+1], m_points_y[i+1]));
+		}
+	}
+
 	// set pixmap
 	this->setPixmap(*img_buffer);
 	painter->end();
@@ -339,6 +363,18 @@ void SliceWidget::mousePressEvent(QMouseEvent *event)
 			emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z, 1);
 		else if (event->buttons() & Qt::RightButton)
 			emit mouse_press_sig(slice_type, coord_x, coord_y, coord_z, 2);
+
+		if (mode == 3 || mode == 4) {
+			if (event->buttons() & Qt::LeftButton) {
+				m_points_x.push_back(event->x());
+				m_points_y.push_back(event->y());
+			}
+			else if (event->buttons() & Qt::RightButton) {
+				m_points_x.clear();
+				m_points_y.clear();
+			}
+			set_pixmap();
+		}
 	}
 
 	mouse_last_x = event->x();
@@ -357,6 +393,11 @@ void SliceWidget::mouseReleaseEvent(QMouseEvent *event)
 		return;
 
 	if (mode > 0) {
+		if (mode == 1) {
+			m_points_x.clear();
+			m_points_y.clear();
+		}
+
 		int pixel_v;
 		float coord_x, coord_y, coord_z;
 		tie(coord_x, coord_y, coord_z, pixel_v) = convert_coord(event->x(), event->y());
@@ -463,6 +504,12 @@ void SliceWidget::mouseMoveEvent(QMouseEvent *event)
 		is_cursor_visible = 1;
 		mouse_cur_x = mouse_x;
 		mouse_cur_y = mouse_y;
+
+		if (mode == 1 && (event->buttons() & Qt::LeftButton)) {
+			m_points_x.push_back(mouse_x);
+			m_points_y.push_back(mouse_y);
+		}
+
 		set_pixmap();
 		return;
 	}

@@ -5,7 +5,6 @@
 #include "gdcmImageReader.h"
 #include "data_cube.h"
 #include "sliceWidget.h"
-//TODO_CGIP: add header files here
 
 #include "cgip_header/CgipMagicBrush/CgipMagicBrush.h"
 #include "cgip_header/FreeDraw/CgipBrush.h"
@@ -15,8 +14,6 @@
 #include "cgip_header/MPRMod/CgipMPRMod.h"
 #include "cgip_header/Common/CgipPoint.h"
 #include "cgip_header/Common/CgipVolume.h"
-#include "cgip_header/GraphCut/CgipGraphCut2D.h"
-#include "cgip_header/GraphCut/CgipGraphCut3D.h"
 #include "cgip_header/GraphCut/CgipGridCut.h"
 #include "cgip_header/GraphCut/CgipGraphCutBrush.h"
 
@@ -117,22 +114,12 @@ private:
 	QString color_list[8] = { "eraser.png", "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
-	//TODO_CGIP: add pointers for class objects of functions
-	/*
-	cgip::CgipVolume *cgip_volume;
-	cgip::CgipMask **cgip_mask;
-	cgip::CgipMagicBrush *cgip_magic_brush;
-	*/
-
 	cgip::CgipVolume* cgip_volume;
 	cgip::CgipMask* cgip_mask;
 	cgip::CgipMask2D* cgip_maskimage;
 	cgip::CgipMask2D* cgip_image;
 	cgip::CgipVolume* cgip_volume_down;
 	cgip::CgipMask* cgip_mask_down;
-
-	//TODO_CGIP: add pointers for class objects of functions
-	//ex) cgip::CgipMagicBrush *cgip_magic_brush;
 
 	cgip::CgipMagicBrush* cgip_magic_brush = nullptr;
 
@@ -141,8 +128,6 @@ private:
 	cgip::CgipFreeDraw* cgip_freedraw;
 	cgip::CgipCurve* cgip_curve;
 	cgip::CgipLiveWire* cgip_livewire;
-	cgip::CgipGraphCut2D *cgip_gc_2d;
-	cgip::CgipGraphCut3D *cgip_gc_3d;
 	cgip::CgipGridCut* cgip_grid_3d;
 	cgip::CgipGraphCutBrush* cgip_gc_brush = nullptr;
 

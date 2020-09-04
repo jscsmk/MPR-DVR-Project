@@ -72,6 +72,7 @@ private:
 	int window_changed, zoom_changed;
 	QPixmap *img_buffer;
 	tuple<float, float, float, int> convert_coord(int mouse_x, int mouse_y);
+	std::vector<int> m_points_x, m_points_y;
 };
 
 #endif

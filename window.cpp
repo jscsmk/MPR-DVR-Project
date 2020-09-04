@@ -79,7 +79,9 @@ Window::Window(MainWindow *mw)
 	mask_count = 7;
 
 	// add local file browser
-	QString root_path = "c:/vscode_workspace";
+	QString root_path = "";
+	//QString root_path = "c:/vscode_workspace/data";
+
 	model = new QFileSystemModel();
 	model->setRootPath(root_path);
 	const QModelIndex rootIndex = model->index(QDir::cleanPath(root_path));
@@ -478,12 +480,12 @@ void Window::change_function_mode_z(int m)
 			int this_function_mode, this_function_color;
 			tie(this_function_mode, this_function_color) = get_function_status(0);
 
-			QVector3D s, r, d;
-			int w, h;
-			float pl;
-			tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(0);
-			cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
-			cgip_gc_brush = new CgipGraphCutBrush(this_function_color, radius, box_radius, cgip_mprmod, cgip_mask, cgip_volume);
+			//QVector3D s, r, d;
+			//int w, h;
+			//float pl;
+			//tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(0);
+			//cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
+			cgip_gc_brush = new CgipGraphCutBrush(radius, box_radius, cgip_mask, cgip_volume, 2, 0.3);
 			printf("Created GC Brush\n");
 		}
 	}
@@ -721,29 +723,15 @@ void Window::load_images(int z, int x, int y, int a, int b)
 	skipping_mode = true;
 	QString skip_text = "empty-space skipping: ON";
 
-
-	//TODO_CGIP: add class objects here
-	/*
-	cgip_volume = new CgipVolume(x, y, z, data_3d);
-	cgip_mask = (CgipMask **)malloc(mask_count * sizeof(CgipMask *));
-	for (int m = 0; m < mask_count; m++)
-		cgip_mask[m] = new CgipMask(x, y, z, mask_3d[m]);
-
-	cgip_volume->setSpacingX(1);
-	cgip_volume->setSpacingY(1);
-	cgip_volume->setSpacingZ(slice_thickness);
-	cgip_magic_brush = new CgipMagicBrush(50, 1, cgip_volume, cgip_mask);
-	*/
-
 	cgip_volume = new CgipVolume(x, y, z, data_3d);
 	cgip_mask = new CgipMask(x, y, z, mask_3d);
 
 	radius = 10;
-	box_radius = 30;
+	box_radius = 40;
 	action = 1;
 	smooth = 1;
 	cutModel = 1;
-	intensityModel = 3;
+	intensityModel = 1;
 
 	alpha = 1.0;
 	bkg_val = 100;
@@ -1062,7 +1050,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 	QVector3D s, r, d;
 	int w, h;
 	float pl;
-	if (this_function_mode == 1 || this_function_mode == 2 || (this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0) || this_function_mode == 6 || this_function_mode == 7) {
+	if (this_function_mode == 1 || this_function_mode == 2 ||(this_function_mode == 3 && function_started == 0) || (this_function_mode == 4 && function_started == 0) || this_function_mode >= 6) {
 		tie(s, r, d, w, h, pl) = data_cube->get_MPR_info(slice_type);
 		cgip_mprmod = new CgipMPRMod(CgipPoint(s.x(), s.y(), s.z()), w, h, pl, CgipPoint(r.x(), r.y(), r.z()), CgipPoint(d.x(), d.y(), d.z()), 1, 1, 3);
 	}
@@ -1121,13 +1109,13 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			update_all_slice();
 			function_started = 1;
 		}
-	}
+	}	
 	else if (this_function_mode == 6) { // graphcut 2d
 		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
 			if (click_type == 1) { // cut
-				cgip_gc_2d = new CgipGraphCut2D(cgip_volume, cgip_mask, mask_count);
-				cgip_gc_2d->set_data(cgip_mprmod);
-				cgip_gc_2d->cut();
+				//cgip_gc_2d = new CgipGraphCut2D(cgip_volume, cgip_mask, mask_count);
+				//cgip_gc_2d->set_data(cgip_mprmod);
+				//cgip_gc_2d->cut();
 				function_started = 1;
 			}
 			else { // uncut
@@ -1140,40 +1128,31 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
 			if (click_type == 1) { // cut
 				function_started = 1;
-
-				/*
-				int down_x = cgip_volume_down->getWidth();
-				int down_y = cgip_volume_down->getHeight();
-				int down_z = cgip_volume_down->getDepth();
-				int up_x = cgip_volume->getWidth();
-				int up_y = cgip_volume->getHeight();
-				int up_z = cgip_volume->getDepth();
-				*/
-
 				clock_t total_1 = clock();
 				clock_t t2;
 
 				printf("intensity model: %d\n", intensityModel);
 
 				// apply 3d graph cut (volume, mask, mask_count, intensityModel, alpha, iter, bkg_prob)
-				// cgip_gc_3d = new CgipGraphCut3D(cgip_volume_down, cgip_mask_down, mask_count, intensityModel, alpha, 2, bkg_val);
-				cgip_grid_3d = new CgipGridCut(cgip_volume, cgip_mask, intensityModel, bkg_val, alpha);
+				cgip_grid_3d = new CgipGridCut(cgip_volume, cgip_mask, 3, bkg_val, alpha);
 				cgip_grid_3d->cut3d(4);
+				update_all_slice();
 
 				t2 = clock();
 				printf(">> total: %f\n", (float)(t2 - total_1) / CLOCKS_PER_SEC);
 			}
 			else { // uncut
-				printf("[uncut]\n");
+				//printf("[uncut]\n");
 				//cgip_gc_3d->uncut();
-				cgip_grid_3d->uncut3d();
+				//cgip_grid_3d->uncut3d();
 
-				function_started = 0;
+				//function_started = 0;
 			}
 		}
 	}
 	else if (this_function_mode == 8) { // gc brush
 		if (cgip_gc_brush) {
+			cgip_gc_brush->init_mpr(cgip_mprmod);
 			cgip_gc_brush->setAction(this_function_color);
 			cgip_gc_brush->cut3d(CgipPoint(x, y, z / slice_thickness));
 			update_all_slice();
@@ -1187,18 +1166,8 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 {
 	int this_function_mode, this_function_color;
 	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
+
 	//TODO_CGIP: add mouse move event here
-	/*
-	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
-	Tip2: this is called only if function_started == 1
-
-	if (function_mode == 1) {
-
-	}
-	else if (function_mode == 2) {
-
-	}
-	*/
 	if (this_function_mode == 1) { // free draw
 		cgip_freedraw->moveBall(CgipPoint(x, y, z / slice_thickness));
 	}
@@ -1231,20 +1200,6 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
 
 	//TODO_CGIP: add mouse release event here
-	/*
-	Tip1: CgipPoint cur_point(x, y, z / slice_thickness);
-	Tip2: change function_started to 0 when terminated
-	TIP3: to update slices, do "update_all_slice();"
-
-	CgipMask this_mask = cgip_mask[this_function_color];
-
-	if (this_function_mode == 1) {
-
-	}
-	else if (this_function_mode == 2) {
-
-	}
-	*/
 	if (this_function_mode == 1) { // free draw
 		cgip_freedraw->endBall(CgipPoint(x, y, z / slice_thickness));
 
@@ -1271,10 +1226,6 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 void Window::wheel_changed(int slice_type, int key_type, int dir)
 {
 	//TODO_CGIP: add mouse wheel event here
-	/*
-	Tip1: key_type = 1 is Ctrl key, key_type = 2 is Shift key
-	Tip2: dir is either 1 or -1
-	*/
 	int this_function_mode, this_function_color;
 	tie(this_function_mode, this_function_color) = get_function_status(slice_type);
 
@@ -1315,13 +1266,13 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 		}
 		else if (this_function_mode == 8) { // gc brush
 			if (cgip_gc_brush) {
-				float r_gcb = cgip_gc_brush->getRadius();
-				float r_b_gcb = cgip_gc_brush->getBoxRadius();
+				float r_gcb = cgip_gc_brush->getBrushRadius();
+				float r_b_gcb = cgip_gc_brush->getRoiRadius();
 				radius = r_gcb + (float)dir;
 				radius = min(radius, r_b_gcb / 2);
 				radius = max(radius, 2.0f);
 
-				cgip_gc_brush->setRadius(radius);
+				cgip_gc_brush->setBrushRadius(radius);
 				printf("radius: %f\n", radius);
 
 				slice_widget_z->set_radius(radius);
@@ -1346,13 +1297,13 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 		}
 		else if (this_function_mode == 8) { // gc brush
 			if (cgip_gc_brush) {
-				float r_gcb = cgip_gc_brush->getRadius();
-				float r_b_gcb = cgip_gc_brush->getBoxRadius();
+				float r_gcb = cgip_gc_brush->getBrushRadius();
+				float r_b_gcb = cgip_gc_brush->getRoiRadius();
 				box_radius = r_b_gcb + (float)dir;
 				box_radius = max(box_radius, r_gcb * 2);
 				box_radius = min(box_radius, 100.0f);
 
-				cgip_gc_brush->setBoxRadius(box_radius);
+				cgip_gc_brush->setRoiRadius(box_radius);
 
 				slice_widget_z->set_box_radius(box_radius);
 				slice_widget_x->set_box_radius(box_radius);
