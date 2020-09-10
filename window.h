@@ -14,8 +14,8 @@
 #include "cgip_header/MPRMod/CgipMPRMod.h"
 #include "cgip_header/Common/CgipPoint.h"
 #include "cgip_header/Common/CgipVolume.h"
-#include "cgip_header/GraphCut/CgipGridCut.h"
-#include "cgip_header/GraphCut/CgipGraphCutBrush.h"
+//#include "cgip_header/GraphCut/CgipGridCut.h"
+//#include "cgip_header/GraphCut/CgipGraphCutBrush.h"
 
 
 class QSignalMapper;
@@ -109,8 +109,8 @@ private:
 	bool skipping_mode;
 	int function_mode_z, function_mode_x, function_mode_y, function_started, function_color_z, function_color_x, function_color_y;
 	//TODO_CGIP: specify function names
-	static const int n_functions = 9;
-	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire", "magic brush", "graphcut 2d", "graphcut 3d", "graphcut brush"};
+	static const int n_functions = 6;
+	QString function_list[n_functions] = { "off", "free draw", "brush", "curve", "live wire", "magic brush" }; // , "graphcut 2d", "graphcut 3d", "graphcut brush"};
 	QString color_list[8] = { "eraser.png", "magenta.png", "cyan.png", "yellow.png", "orange.png", "violet.png", "azure.png", "rose.png" };
 	QPushButton *color_button_z, *color_button_x, *color_button_y;
 
@@ -124,13 +124,13 @@ private:
 	cgip::CgipMagicBrush* cgip_magic_brush = nullptr;
 
 	cgip::CgipMPRMod* cgip_mprmod;
-	cgip::CgipBrush* cgip_brush;
+	cgip::CgipBrush* cgip_brush = nullptr;
 	cgip::CgipFreeDraw* cgip_freedraw;
 	cgip::CgipCurve* cgip_curve;
 	cgip::CgipLiveWire* cgip_livewire;
-	cgip::CgipGridCut* cgip_grid_2d;
-	cgip::CgipGridCut* cgip_grid_3d;
-	cgip::CgipGraphCutBrush* cgip_gc_brush = nullptr;
+	//cgip::CgipGridCut* cgip_grid_2d;
+	//cgip::CgipGridCut* cgip_grid_3d;
+	//cgip::CgipGraphCutBrush* cgip_gc_brush = nullptr;
 
 	float radius, box_radius;
 	float smooth;
@@ -140,6 +140,7 @@ private:
 	int bkg_val;
 
 	std::string str_path;
+	void create_function(int f);
 };
 
 #endif

@@ -101,8 +101,8 @@ Window::Window(MainWindow *mw)
 	for (int i = 1; i < model->columnCount(); ++i)
 		tree->hideColumn(i);
 
-	//hideBtn = new QPushButton(tr("<"), this);
-	//hideBtn->setFixedSize(20, 100);
+	hideBtn = new QPushButton(tr("<"), this);
+	hideBtn->setFixedSize(20, 100);
 
 	// add menubar for MPR
 	QMenu *toggle_menu_z, *toggle_menu_x, *toggle_menu_y, *init_menu_z, *init_menu_x, *init_menu_y;
@@ -284,7 +284,7 @@ Window::Window(MainWindow *mw)
 
 	// add connections
 	connect(tree, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(get_path()));
-	//connect(hideBtn, &QPushButton::clicked, this, &Window::hide_tree);
+	connect(hideBtn, &QPushButton::clicked, this, &Window::hide_tree);
 
 	connect(toggle_slice_line_z, &QAction::triggered, slice_widget_z, &SliceWidget::toggle_slice_line);
 	connect(toggle_slice_line_x, &QAction::triggered, slice_widget_x, &SliceWidget::toggle_slice_line);
@@ -363,17 +363,17 @@ Window::Window(MainWindow *mw)
 
 	// set layout
 	mainLayout = new QHBoxLayout;
-	//QVBoxLayout *container_1 = new QVBoxLayout;
+	QVBoxLayout *container_1 = new QVBoxLayout;
 	QVBoxLayout *container_2 = new QVBoxLayout;
 	container_3 = new QVBoxLayout;
 
-	//w_browser = new QWidget;
+	w_browser = new QWidget;
 
-	//container_1->addWidget(selected);
-	//container_1->addWidget(tree);
-	//container_1->setMargin(0);
-	//w_browser->setLayout(container_1);
-	//w_browser->setFixedWidth(280);
+	container_1->addWidget(selected);
+	container_1->addWidget(tree);
+	container_1->setMargin(0);
+	w_browser->setLayout(container_1);
+	w_browser->setFixedWidth(280);
 
 	container_2->addWidget(menubar_z);
 	container_2->addWidget(slice_widget_z);
@@ -400,8 +400,8 @@ Window::Window(MainWindow *mw)
 	container_3->setSpacing(0);
 	container_3->setMargin(0);
 
-	//mainLayout->addWidget(w_browser);
-	//mainLayout->addWidget(hideBtn);
+	mainLayout->addWidget(w_browser);
+	mainLayout->addWidget(hideBtn);
 	mainLayout->addLayout(container_2);
 	mainLayout->addLayout(container_3);
 
@@ -452,6 +452,18 @@ void Window::_init_all()
 	_init_geometry();
 }
 
+void Window::create_function(int f) {
+	if (f == 2) { // brush
+		if (cgip_brush == nullptr) {
+			cgip_brush = new CgipBrush(0, radius, cgip_mask);
+		}
+	}
+	else if (f == 5) { // Magic brush
+		if (cgip_magic_brush == nullptr) {
+			cgip_magic_brush = new CgipMagicBrush(radius, 10.0, cgip_volume, cgip_mask);
+		}
+	}
+}
 void Window::change_function_mode_z(int m)
 {
 	if (function_mode_z == m)
@@ -463,6 +475,8 @@ void Window::change_function_mode_z(int m)
 	slice_widget_z->set_radius(radius);
 	slice_widget_z->set_box_radius(box_radius);
 
+	create_function(function_mode_z);
+	/*
 	// In case CgipMagicBrush
 	if (function_mode_z == 5) {
 		change_function_mode_x(5);
@@ -493,6 +507,7 @@ void Window::change_function_mode_z(int m)
 			printf("Created GC Brush\n");
 		}
 	}
+	*/
 }
 void Window::change_function_mode_x(int m)
 {
@@ -504,6 +519,7 @@ void Window::change_function_mode_x(int m)
 	slice_widget_x->set_mode(function_mode_x);
 	slice_widget_x->set_radius(radius);
 	slice_widget_x->set_box_radius(box_radius);
+	create_function(function_mode_z);
 }
 void Window::change_function_mode_y(int m)
 {
@@ -515,6 +531,7 @@ void Window::change_function_mode_y(int m)
 	slice_widget_y->set_mode(function_mode_y);
 	slice_widget_y->set_radius(radius);
 	slice_widget_y->set_box_radius(box_radius);
+	create_function(function_mode_z);
 }
 void Window::change_color_z(int c)
 {
@@ -543,11 +560,11 @@ void Window::change_color_y(int c)
 
 void Window::get_path()
 {
-	/*
 	QModelIndex index = tree->currentIndex();
 	QString cur_path = model->filePath(index);
 	QModelIndex p_idx = model->index(cur_path);
 
+	/*
 	if (!tree->isExpanded(index)) {
 		connect(tree, SIGNAL(expanded(index)), loop_1, SLOT(quit()));
 		connect(model, SIGNAL(directoryLoaded(QString)), loop_1, SLOT(quit()));
@@ -559,16 +576,23 @@ void Window::get_path()
 	*/
 
 	int num_rows, img_count, img_w, img_h, diff_count, rescale_intercept, rescale_slope;
-	//num_rows = model->rowCount(p_idx);
+	num_rows = model->rowCount(p_idx);
 	diff_count = 0;
 	img_count = 0;
 	img_w = -1;
 	img_h = -1;
 
-	//selected->setText("Path: " + cur_path);
+	selected->setText("Path: " + cur_path);
 	file_list = {};
 
+
+
 	/*
+	for (const auto & entry : fs::directory_iterator(str_path)) {
+		QString file_path(entry.path().string().c_str());
+
+		if (1) {
+	*/
 	for (int i = 0; i < num_rows; ++i) {
 		QModelIndex childIndex = model->index(i, 0, p_idx);
 		QString file_name = model->data(childIndex).toString();
@@ -576,11 +600,6 @@ void Window::get_path()
 		QString file_path = cur_path + "/" + file_name;
 
 		if (fi.suffix() == "dcm" || fi.suffix() == "DCM") {
-	*/
-	for (const auto & entry : fs::directory_iterator(str_path)) {
-		QString file_path(entry.path().string().c_str());
-
-		if (1) {
 			file_list.append(file_path);
 			img_count++;
 
@@ -937,30 +956,36 @@ void Window::update_cursors(int slice_type, float x, float y, float z)
 			slice_widget_x->draw_cursor(x, y, z, radius, 0, 1);
 			slice_widget_y->draw_cursor(x, y, z, radius, 0, 1);
 		}
+		/*
 		else if (function_mode_z == 8) {
 			slice_widget_x->draw_cursor(x, y, z, radius, box_radius, 2);
 			slice_widget_y->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
+		*/
 	}
 	else if (slice_type == 1) {
 		if (function_mode_x == 5) {
 			slice_widget_z->draw_cursor(x, y, z, radius, 0, 1);
 			slice_widget_y->draw_cursor(x, y, z, radius, 0, 1);
 		}
+		/*
 		else if (function_mode_x == 8) {
 			slice_widget_z->draw_cursor(x, y, z, radius, box_radius, 2);
 			slice_widget_y->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
+		*/
 	}
 	else {
 		if (function_mode_y == 5) {
 			slice_widget_z->draw_cursor(x, y, z, radius, 0, 1);
 			slice_widget_x->draw_cursor(x, y, z, radius, 0, 1);
 		}
+		/*
 		else if (function_mode_y == 8) {
 			slice_widget_z->draw_cursor(x, y, z, radius, box_radius, 2);
 			slice_widget_x->draw_cursor(x, y, z, radius, box_radius, 2);
 		}
+		*/
 	}
 }
 void Window::update_dvr_slices()
@@ -1072,7 +1097,8 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 		function_started = 1;
 	}
 	else if (this_function_mode == 2) { // brush
-		cgip_brush = new CgipBrush(this_function_color, radius, cgip_mask);
+		//cgip_brush = new CgipBrush(this_function_color, radius, cgip_mask);
+		cgip_brush->setAction(this_function_color);
 		cgip_brush->init_mpr(cgip_mprmod);
 		cgip_brush->startBall(CgipPoint(x, y, z / slice_thickness));
 		function_started = 1;
@@ -1120,6 +1146,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			function_started = 1;
 		}
 	}
+	/*
 	else if (this_function_mode == 6) { // graphcut 2d
 		if ((function_started == 0 && click_type == 1) || (function_started == 1 && click_type == 2)) {
 			if (click_type == 1) { // cut
@@ -1172,6 +1199,7 @@ void Window::mouse_pressed(int slice_type, float x, float y, float z, int click_
 			function_started = 1;
 		}
 	}
+	*/
 
 	update_cursors(slice_type, x, y, z);
 }
@@ -1200,12 +1228,14 @@ void Window::mouse_moved(int slice_type, float x, float y, float z)
 			update_all_slice();
 		}
 	}
+	/*
 	else if (this_function_mode == 8) { // gc brush
 		if (cgip_gc_brush) {
 			cgip_gc_brush->cut3d(CgipPoint(x, y, z / slice_thickness));
 			update_all_slice();
 		}
 	}
+	*/
 }
 void Window::mouse_released(int slice_type, float x, float y, float z)
 {
@@ -1229,9 +1259,11 @@ void Window::mouse_released(int slice_type, float x, float y, float z)
 			function_started = 0;
 		}
 	}
+	/*
 	else if (this_function_mode == 8) { // gc brush
 		function_started = 0;
 	}
+	*/
 
 	update_all_slice();
 	update_cursors(slice_type, x, y, z);
@@ -1264,6 +1296,7 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				slice_widget_y->set_radius(radius);
 			}
 		}
+		/*
 		else if (this_function_mode == 6) { // graphcut 2d
 
 		}
@@ -1293,6 +1326,7 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				slice_widget_y->set_radius(radius);
 			}
 		}
+		*/
 	}
 	else if (key_type == 2) {
 		if (this_function_mode == 5) { // magic brush
@@ -1303,6 +1337,7 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				printf("sensitivity: %f\n", s);
 			}
 		}
+		/*
 		else if (this_function_mode == 7) {
 			alpha += (0.2 * (int)dir);
 
@@ -1323,5 +1358,6 @@ void Window::wheel_changed(int slice_type, int key_type, int dir)
 				slice_widget_y->set_box_radius(box_radius);
 			}
 		}
+		*/
 	}
 }
